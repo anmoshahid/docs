@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Axtroid Doc Studio</title>
+<title>Knowledge Base Studio</title>
 <style>
   :root{
     --ink:#1C1B1F; --ink-soft:#262529; --ink-line:#38363B;
@@ -393,7 +393,7 @@
     <div class="preloader-ring-wrap">
       <div class="preloader-ring"></div>
       <div class="preloader-ring-2"></div>
-      <img class="preloader-logo" src="https://raw.githubusercontent.com/axtroid/support/main/axtroid-logo-mini.png" alt="Axtroid">
+      <img class="preloader-logo" src="https://raw.githubusercontent.com/axtroid/support/main/axtroid.logo-mini.png" alt="Axtroid">
     </div>
     <div class="preloader-text">Loading DOC Studio…</div>
   </div>
@@ -638,44 +638,17 @@ function loadKbData(){
   if (!settings || !settings.owner || !settings.repo || !settings.path || !settings.branch){
     return loadLocalData();
   }
-return ghGetFile(siblingPath('data.json')).then(function(file){
-
-    // Small files
-    if (file.content && file.encoding === "base64") {
-        var parsed = JSON.parse(
-            decodeURIComponent(
-                escape(atob(file.content.replace(/\n/g,'')))
-            )
-        );
-
-        storageSet(DATA_KEY, JSON.stringify(parsed));
-        return parsed;
-    }
-
-    // Large files
-    if (file.download_url) {
-        return fetch(file.download_url)
-            .then(r => r.json())
-            .then(parsed => {
-                storageSet(DATA_KEY, JSON.stringify(parsed));
-                return parsed;
-            });
-    }
-
-    throw new Error("Unable to read data.json");
-
-}).catch(function(e){
-
-    console.warn(e);
-
-    showToast(
-        'Could not load latest content from GitHub — showing local copy',
-        true
-    );
-
+  return ghGetFile(siblingPath('data.json')).then(function(file){
+    if (!file || !file.content) throw new Error('data.json has not been published yet');
+    var parsed = JSON.parse(decodeURIComponent(escape(atob(file.content.replace(/\n/g,'')))));
+    storageSet(DATA_KEY, JSON.stringify(parsed)); /* keep a local mirror for offline fallback */
+    return parsed;
+  }).catch(function(e){
+    console.warn('Could not load data.json from GitHub, showing local copy instead:', e.message);
+    showToast('Could not load latest content from GitHub — showing local copy', true);
     return loadLocalData();
-
-});
+  });
+}
 function saveData(){
   storageSet(DATA_KEY, JSON.stringify(data));
 }
@@ -1985,6 +1958,7 @@ function exportRuntimeJs(){
       homeProductId = active;
       main.innerHTML =
         '<div class="home-hero">' +
+          '<img class="home-hero-logo" src="https://raw.githubusercontent.com/axtroid/support/main/logo-axtroid.png" alt="Axtroid">' +
           '<h1 class="home-title">Welcome to Axtroid Support</h1>' +
           '<p class="home-sub">Search our knowledge base, or browse a product below.</p>' +
           '<div class="home-search-wrap" id="homeSearchWrap">' +
@@ -2078,7 +2052,7 @@ function exportRuntimeJs(){
         '<div class="article-kicker">'+esc(prod.name)+' — '+esc(sec.title)+'</div>'+
         '<h1 class="article-title">'+esc(t.title)+'</h1>'+
         '<div class="article-meta"><span>Last updated '+esc(t.updated||'')+'</span>'+
-        '<button class="fav-toggle'+(isFav?' is-fav':'')+'" id="favToggleBtn">★ '+(isFav?'Saved to favourites':'Favourite')+'</button>'+
+        '<button class="fav-toggle'+(isFav?' is-fav':'')+'" id="favToggleBtn">★ '+(isFav?'Saved to favourites':'Add to favourites')+'</button>'+
         printMenuHtml()+
         '</div>'+
         '<div class="article-body">'+(t.blocks||[]).map(blockToHtml).join('')+'</div>'+
