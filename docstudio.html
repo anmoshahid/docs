@@ -638,12 +638,24 @@ function loadKbData(){
   if (!settings || !settings.owner || !settings.repo || !settings.path || !settings.branch){
     return loadLocalData();
   }
-  return ghGetFile(siblingPath('data.json')).then(function(file){
-    if (!file || !file.content) throw new Error('data.json has not been published yet');
-    var parsed = JSON.parse(decodeURIComponent(escape(atob(file.content.replace(/\n/g,'')))));
-    storageSet(DATA_KEY, JSON.stringify(parsed)); /* keep a local mirror for offline fallback */
+return ghGetFile(siblingPath('data.json')).then(function(file){
+
+    console.log("Requested path:", siblingPath('data.json'));
+    console.log("GitHub response:", file);
+
+    if (!file || !file.content)
+        throw new Error('data.json has not been published yet');
+
+    var parsed = JSON.parse(
+        decodeURIComponent(
+            escape(atob(file.content.replace(/\n/g,'')))
+        )
+    );
+
+    storageSet(DATA_KEY, JSON.stringify(parsed));
     return parsed;
-  }).catch(function(e){
+
+}).catch(function(e){
     console.warn('Could not load data.json from GitHub, showing local copy instead:', e.message);
     showToast('Could not load latest content from GitHub — showing local copy', true);
     return loadLocalData();
