@@ -531,6 +531,13 @@
         var r=a.getBoundingClientRect();
         return { href:a.href, top:r.top-wrapRectForLinks.top, left:r.left-wrapRectForLinks.left, width:r.width, height:r.height };
       });
+      /* Images and callout boxes should never be sliced in half by a page
+         break — captured here so buildTopicPdf can nudge a page break
+         earlier to keep each one whole on a single page. */
+      var atomicBlocks=Array.prototype.slice.call(bodyClone.querySelectorAll('figure, .callout')).map(function(el){
+        var r=el.getBoundingClientRect();
+        return { top:r.top-wrapRectForLinks.top, height:r.height };
+      }).filter(function(b){ return b.height>0; });
       Promise.all([waitForImages(wrap), loadPdfLogo()]).then(function(results){
         var logoImg=results[1];
         var wrapCssHeight=wrap.scrollHeight;
@@ -539,14 +546,18 @@
           .then(function(canvas){ return {canvas:canvas, logoImg:logoImg, wrapCssHeight:wrapCssHeight}; });
       }).then(function(r){
         document.body.removeChild(wrap);
-        buildTopicPdf(r.canvas, r.logoImg, topicTitle, productName, headings, r.wrapCssHeight, links);
+        buildTopicPdf(r.canvas, r.logoImg, topicTitle, productName, headings, r.wrapCssHeight, links, atomicBlocks);
       }).catch(function(e){
         console.error('PDF generation failed', e);
         if (document.body.contains(wrap)) document.body.removeChild(wrap);
         alert('PDF generation failed.');
       });
     }
-    function buildTopicPdf(canvas, logoImg, topicTitle, productName, headings, wrapCssHeight, links){
+    /* Page breaks default to a fixed-height slice every contentH points,
+       but are nudged earlier whenever that slice would otherwise cut
+       straight through an image or callout box, so those always land
+       whole on one page (see the editor's copy of this function). */
+    function buildTopicPdf(canvas, logoImg, topicTitle, productName, headings, wrapCssHeight, links, atomicBlocks){
       var jsPDF=window.jspdf.jsPDF;
       var pdf=new jsPDF({unit:'pt',format:'a4',compress:true});
       var pageW=pdf.internal.pageSize.getWidth(), pageH=pdf.internal.pageSize.getHeight();
@@ -554,8 +565,34 @@
       var contentH=pageH - marginTop - marginBottom;
       var imgData=canvas.toDataURL('image/png');
       var imgW=pageW, imgH=canvas.height*imgW/canvas.width;
-      var contentPageCount=Math.max(1, Math.ceil(imgH/contentH));
       var CAPTURE_WIDTH=760; // matches the fixed CSS width of the offscreen capture wrap
+      var scale = imgW / CAPTURE_WIDTH;
+
+      var atomicRanges=(atomicBlocks||[]).map(function(b){
+        return { top: b.top*scale, bottom: (b.top+b.height)*scale };
+      }).sort(function(a,b){ return a.top-b.top; });
+      var pageBreaksPt=[0];
+      (function(){
+        var y=0, guard=0;
+        while (y < imgH - 0.5 && guard < 2000){
+          guard++;
+          var candidate = y + contentH;
+          if (candidate >= imgH){ pageBreaksPt.push(imgH); return; }
+          for (var bi=0; bi<atomicRanges.length; bi++){
+            var rg=atomicRanges[bi];
+            if (rg.top < candidate && rg.bottom > candidate && rg.top > y+1){ candidate = rg.top; break; }
+          }
+          pageBreaksPt.push(candidate);
+          y = candidate;
+        }
+        if (pageBreaksPt[pageBreaksPt.length-1] < imgH) pageBreaksPt.push(imgH);
+      })();
+      var contentPageCount = pageBreaksPt.length - 1;
+      function pageIndexForY(yPt){
+        for (var i=0; i<contentPageCount; i++){ if (yPt < pageBreaksPt[i+1] || i===contentPageCount-1) return i; }
+        return contentPageCount-1;
+      }
+
       function drawHeader(){
         if (logoImg){
           var lh=24, lw=lh*(logoImg.naturalWidth/logoImg.naturalHeight||3);
@@ -584,8 +621,7 @@
         var y=122;
         headings.forEach(function(h){
           if (y > pageH-marginBottom-20) return;
-          var ratio = wrapCssHeight>0 ? h.top/wrapCssHeight : 0;
-          var targetPage = 2 + Math.min(contentPageCount-1, Math.floor(ratio*contentPageCount));
+          var targetPage = 2 + pageIndexForY(h.top * scale);
           var indent = 40 + (h.level-1)*16;
           pdf.setTextColor(201,122,31);
           pdf.textWithLink(h.text, indent, y, {pageNumber: targetPage});
@@ -599,7 +635,7 @@
       }
       for (var p=0; p<contentPageCount; p++){
         pdf.addPage();
-        var yPos = marginTop - (p*contentH);
+        var yPos = marginTop - pageBreaksPt[p];
         pdf.addImage(imgData,'PNG',0,yPos,imgW,imgH,'','FAST');
         pdf.setFillColor(255,255,255);
         pdf.rect(0,0,pageW,marginTop,'F');
@@ -610,20 +646,16 @@
       /* ---- Restore clickable hyperlinks over the rasterized image (see
          note in the editor's copy of this function). ---- */
       if (links && links.length){
-        var scale = imgW / CAPTURE_WIDTH;
         links.forEach(function(l){
           if (!l.width || !l.height) return;
           var yTop=l.top*scale, yBottom=(l.top+l.height)*scale;
           var xLeft=l.left*scale, wScaled=l.width*scale;
-          var pFirst=Math.max(0, Math.floor(yTop/contentH));
-          var pLast=Math.max(0, Math.floor((yBottom-0.01)/contentH));
-          for (var pp=pFirst; pp<=pLast; pp++){
-            if (pp>=contentPageCount) continue;
-            var segTop=Math.max(yTop, pp*contentH);
-            var segBottom=Math.min(yBottom, (pp+1)*contentH);
+          for (var pp=0; pp<contentPageCount; pp++){
+            var pStart=pageBreaksPt[pp], pEnd=pageBreaksPt[pp+1];
+            var segTop=Math.max(yTop, pStart), segBottom=Math.min(yBottom, pEnd);
             var hSeg=segBottom-segTop;
             if (hSeg<=0) continue;
-            var pageY=marginTop + (segTop - pp*contentH);
+            var pageY=marginTop + (segTop - pStart);
             var pageNum=headings.length ? pp+2 : pp+1;
             pdf.setPage(pageNum);
             pdf.link(xLeft, pageY, wScaled, hSeg, {url:l.href});
