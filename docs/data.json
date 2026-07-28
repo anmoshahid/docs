@@ -31,6 +31,29 @@
       "product": "Instructions",
       "text": "\"Axtroid DocStudio v1.0.0\" updated",
       "details": [
+        "No visible content change."
+      ]
+    },
+    {
+      "date": "28 Jul 2026",
+      "tag": "updated",
+      "product": "Instructions",
+      "text": "\"Axtroid DocStudio v1.0.0\" updated",
+      "details": [
+        "paragraph edited: \"This is documentation authoring platform for Axtroid Documen…\" → \"This is documentation authoring platform for&nbsp;Axtroid Do…\"",
+        "callout edited: \"Before you start using DocStudio, user must download the sta…\" → \"Before you start using DocStudio, please download the stand-…\"",
+        "list added: \"Once the app is downloaded on to the desktop, click to open the app. | Make sure…\"",
+        "paragraph added: \"Owner: axtroidRepo: documentationPath: docs/index.html (obtain it from your admi…\"",
+        "list removed: \"Once the app is downloaded on to the desktop, click to open the app. | Make sure…\"",
+        "list removed: \"Owner: axtroid | Repo: documentation | Path: docs/index.html (obtain it from you…\""
+      ]
+    },
+    {
+      "date": "28 Jul 2026",
+      "tag": "updated",
+      "product": "Instructions",
+      "text": "\"Axtroid DocStudio v1.0.0\" updated",
+      "details": [
         "heading added: \"Prerequisites\"",
         "paragraph added: \"Always make sure you have necessary access to work on DocStudio.\"",
         "callout added: \"Before you start using DocStudio, user must download the stand-alone app.\"",
