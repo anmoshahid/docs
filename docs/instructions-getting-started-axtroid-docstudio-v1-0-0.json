@@ -3,7 +3,7 @@
     {
       "id": "blk_kbb2pqn",
       "type": "paragraph",
-      "text": "This is documentation authoring platform for Axtroid Documentation Portal www.axtroid.com/documentation."
+      "html": "This is documentation authoring platform for&nbsp;<a href=\"www.axtroid.com/documentation\" target=\"_blank\" rel=\"noopener\">Axtroid Documentation ↗</a>."
     },
     {
       "id": "blk_ot4z66p",
@@ -20,31 +20,24 @@
       "id": "blk_d63ik4p",
       "type": "callout",
       "calloutType": "important",
-      "text": "Before you start using DocStudio, user must download the stand-alone app."
+      "html": "Before you start using DocStudio, please download the stand-alone app."
     },
     {
-      "id": "blk_qobs17x",
+      "id": "blk_ti9opuu",
       "type": "list",
-      "ordered": false,
+      "ordered": true,
       "items": [
         "Once the app is downloaded on to the desktop, click to open the app.",
         "Make sure you see instructions page.",
         "Follow the instructions to set the real-time authoring-environment.",
         "Click ⚙️Settings icon on the top left.",
-        "Fill the details as shown below then click Save Settings."
+        "Fill the details as shown below:"
       ]
     },
     {
-      "id": "blk_svxes5g",
-      "type": "list",
-      "ordered": true,
-      "items": [
-        "Owner: axtroid",
-        "Repo: documentation",
-        "Path: docs/index.html (obtain it from your admin)",
-        "Branch: main",
-        "Personal access token: (obtain it from you admin)"
-      ]
+      "id": "blk_f0ssnbk",
+      "type": "paragraph",
+      "html": "<ul><ul><li>Owner: axtroid</li><li><span style=\"font-size: 15.2px;\">Repo: documentation</span></li><li><span style=\"font-size: 15.2px;\">Path: docs/index.html (obtain it from your admin)</span></li><li><span style=\"font-size: 15.2px;\">Branch: main</span></li><li><span style=\"font-size: 15.2px;\">Personal access token: (obtain it from you admin)</span></li></ul></ul>"
     },
     {
       "id": "blk_j7ctnuu",
