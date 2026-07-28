@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "id": "test_1",
+    "date": "",
+    "product": "",
+    "section": "",
+    "topic": "",
+    "query": "testing the relay",
+    "email": "you@example.com",
+    "status": "open"
+  }
+]
