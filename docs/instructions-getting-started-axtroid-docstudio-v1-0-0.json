@@ -2,14 +2,55 @@
   "blocks": [
     {
       "id": "blk_kbb2pqn",
-      "type": "text",
-      "html": "This is documentation authoring platform for&nbsp;<a class=\"rte-ext-link\" href=\"https://axtroid.com\" target=\"_blank\" rel=\"noopener\">Axtroid Documentation ↗</a>."
+      "type": "paragraph",
+      "text": "This is documentation authoring platform for Axtroid Documentation Portal www.axtroid.com/documentation."
     },
     {
       "id": "blk_ot4z66p",
-      "type": "text",
+      "type": "heading",
       "level": 3,
-      "html": "<h3>Prerequisites</h3><p>Always make sure you have necessary access to work on <b>DocStudio</b>.</p><div class=\"rte-callout rte-callout-note\"><strong>Note</strong>Before you start authoring, please download the stand-alone<a class=\"rte-ext-link\" href=\"https://axtroid.com\" target=\"_blank\" rel=\"noopener\" style=\"font-size: 0.92rem; display: inline !important;\">DocStudio ↗</a>app.</div><p></p><ol><li><span style=\"font-size: 15.2px;\">Once the app is downloaded on to the desktop, click to open the app.</span></li><li>Make sure you see instructions page.</li><li>Follow the instructions to set the real-time authoring-environment.</li><li>Click ⚙️Settings icon on the top left.</li><li>Fill the details as shown below then Click <b style=\"font-size: 0.95rem;\">Connect</b><span style=\"font-size: 0.95rem;\">.</span></li><ul><li><span style=\"font-size: 0.95rem;\">Owner: Axtroid</span></li><li><span style=\"font-size: 0.95rem;\">Repo: documentation</span></li><li><span style=\"font-size: 0.95rem;\">Path: docs/index.html</span></li><li><span style=\"font-size: 0.95rem;\">Branch: main</span></li><li><span style=\"font-size: 0.95rem;\">PAT: (<i>contact</i></span><i style=\"\"><span style=\"font-size: 0.95rem;\">&nbsp;admin</span><span style=\"font-size: 14.72px;\">)</span></i></li></ul><li><span style=\"font-size: 14.72px;\"><i><span style=\"font-size: 15.2px; font-style: normal;\">Restart the application to load the latest content from the server.</span></i></span></li></ol><div class=\"rte-callout rte-callout-tip\"><b>Tip </b>— Personal access token <b>(PAT)</b> is subjected to change, obtain it from your admin.</div><p></p><div></div>"
+      "text": "Prerequisites"
+    },
+    {
+      "id": "blk_sl6bd23",
+      "type": "paragraph",
+      "text": "Always make sure you have necessary access to work on DocStudio."
+    },
+    {
+      "id": "blk_d63ik4p",
+      "type": "callout",
+      "calloutType": "important",
+      "text": "Before you start using DocStudio, user must download the stand-alone app."
+    },
+    {
+      "id": "blk_qobs17x",
+      "type": "list",
+      "ordered": false,
+      "items": [
+        "Once the app is downloaded on to the desktop, click to open the app.",
+        "Make sure you see instructions page.",
+        "Follow the instructions to set the real-time authoring-environment.",
+        "Click ⚙️Settings icon on the top left.",
+        "Fill the details as shown below then click Save Settings."
+      ]
+    },
+    {
+      "id": "blk_svxes5g",
+      "type": "list",
+      "ordered": true,
+      "items": [
+        "Owner: axtroid",
+        "Repo: documentation",
+        "Path: docs/index.html (obtain it from your admin)",
+        "Branch: main",
+        "Personal access token: (obtain it from you admin)"
+      ]
+    },
+    {
+      "id": "blk_j7ctnuu",
+      "type": "callout",
+      "calloutType": "tip",
+      "text": "The application must be restarted to load the latest content from the server."
     }
   ]
 }
