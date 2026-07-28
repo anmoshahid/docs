@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Knowledge Base Studio</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root{
     --ink:#1C1B1F; --ink-soft:#262529; --ink-line:#38363B;
@@ -127,13 +128,45 @@
   .article-body p{margin:0 0 14px;}
   .article-body ul,.article-body ol{margin:0 0 14px;padding-left:22px;}
   .article-body li{margin-bottom:5px;}
-  .article-body pre{background:#EFEAE0;border-radius:var(--radius);padding:12px 14px;overflow-x:auto;font-family:var(--font-mono);font-size:.85rem;}
+  .article-body pre{background:#1E1E2E;color:#CDD6F4;border-radius:var(--radius);padding:12px 14px;overflow-x:auto;font-family:Consolas,'Courier New',monospace;font-size:.85rem;line-height:1.5;white-space:pre;}
+  .article-body code{font-family:Consolas,'Courier New',monospace;background:#EFEAE0;padding:1px 5px;border-radius:3px;font-size:.88em;color:#B3261E;}
+  /* Unified text block in preview */
+  .article-body .rte-content{margin-bottom:14px;}
+  .article-body .rte-content h1{font-family:var(--font-display);font-size:1.7rem;font-weight:700;margin:28px 0 10px;color:var(--ink);}
+  .article-body .rte-content h2{font-family:var(--font-display);font-size:1.35rem;font-weight:700;margin:22px 0 8px;color:var(--ink);}
+  .article-body .rte-content h3{font-size:1.08rem;font-weight:600;margin:16px 0 6px;color:var(--ink);}
+  .article-body .rte-content p{margin:0 0 12px;}
+  .article-body .rte-content ul,.article-body .rte-content ol{margin:0 0 12px;padding-left:22px;}
+  .article-body .rte-content li{margin-bottom:4px;}
+  /* Tables in preview (rte-content blocks) */
+  .article-body .rte-content table{border-collapse:collapse;width:100%;margin:10px 0;display:table;}
+  .article-body .rte-content table td,.article-body .rte-content table th{border:1px solid var(--paper-line);padding:6px 10px;font-size:.9rem;min-width:60px;}
+  .article-body .rte-content table th{background:#F3EFE6;font-weight:700;}
+  /* Also fix any standalone table in article-body */
+  .article-body table{border-collapse:collapse;width:100%;margin:10px 0;display:table;overflow-x:auto;}
+  .article-body table td,.article-body table th{border:1px solid var(--paper-line);padding:6px 10px;font-size:.9rem;min-width:60px;}
+  .article-body table th{background:#F3EFE6;font-weight:700;}
+  /* Inline callouts from RTE — match internal callout block style */
+  .article-body .rte-callout{display:flex;gap:12px;border-left:3px solid var(--accent);background:#FBF1E1;padding:13px 16px;border-radius:0 var(--radius) var(--radius) 0;margin:18px 0;font-size:.92rem;line-height:1.5;}
+  .article-body .rte-callout .rte-callout-icon{width:18px;height:18px;flex-shrink:0;margin-top:2px;color:var(--accent-dark);}
+  .article-body .rte-callout .rte-callout-icon svg{width:18px;height:18px;}
+  .article-body .rte-callout .rte-callout-inner{flex:1;min-width:0;}
+  .article-body .rte-callout .rte-callout-title{font-weight:700;margin-bottom:3px;}
+  .article-body .rte-callout.rte-callout-note{border-left-color:#2E5F9E;background:#E7EEF7;}
+  .article-body .rte-callout.rte-callout-note .rte-callout-icon,.article-body .rte-callout.rte-callout-note .rte-callout-title{color:#2E5F9E;}
+  .article-body .rte-callout.rte-callout-tip{border-left-color:#2F7A34;background:#E5F2E3;}
+  .article-body .rte-callout.rte-callout-tip .rte-callout-icon,.article-body .rte-callout.rte-callout-tip .rte-callout-title{color:#2F7A34;}
+  .article-body .rte-callout.rte-callout-warning{border-left-color:var(--accent-dark);background:#FBF1E1;}
+  .article-body .rte-callout.rte-callout-warning .rte-callout-icon,.article-body .rte-callout.rte-callout-warning .rte-callout-title{color:var(--accent-dark);}
+  .article-body .rte-callout.rte-callout-caution{border-left-color:#B3261E;background:#FBE9E7;}
+  .article-body .rte-callout.rte-callout-caution .rte-callout-icon,.article-body .rte-callout.rte-callout-caution .rte-callout-title{color:#B3261E;}
+  .article-body .rte-callout.rte-callout-important{border-left-color:#6B4FA0;background:#EFE7F7;}
+  .article-body .rte-callout.rte-callout-important .rte-callout-icon,.article-body .rte-callout.rte-callout-important .rte-callout-title{color:#6B4FA0;}
   .article-body figure{margin:20px 0;}
   .article-body img{display:block;max-width:100%;height:auto;border-radius:var(--radius);border:1px solid var(--paper-line);cursor:zoom-in;}
-  .img-lightbox{display:none;position:fixed;inset:0;background:rgba(15,14,12,.78);z-index:300;align-items:center;justify-content:center;padding:32px;}
-  .img-lightbox.is-open{display:flex;}
-  .img-lightbox img{max-width:92vw;max-height:92vh;border-radius:10px;box-shadow:0 24px 64px rgba(0,0,0,.55);pointer-events:none;user-select:none;}
-  .img-lightbox-hint{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);color:#fff;font-size:.78rem;opacity:.75;letter-spacing:.02em;}
+  .img-lightbox-overlay{position:fixed;inset:0;background:rgba(15,14,16,.86);display:flex;align-items:center;justify-content:center;z-index:500;opacity:0;pointer-events:none;transition:opacity .15s ease;padding:24px;}
+  .img-lightbox-overlay.is-open{opacity:1;pointer-events:auto;}
+  .img-lightbox-overlay img{max-width:92vw;max-height:92vh;border-radius:10px;box-shadow:0 24px 70px rgba(0,0,0,.55);}
   .article-body figcaption{margin-top:6px;font-size:.78rem;color:var(--text-muted);text-align:center;}
   .topic-feedback{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:36px 0 8px;padding:14px 16px;border:1px solid var(--paper-line);border-radius:var(--radius);background:#FBF9F5;font-size:.88rem;color:var(--text-main);}
   .topic-feedback-buttons{display:flex;gap:8px;}
@@ -184,15 +217,25 @@
   .home-topic-card-arrow{color:var(--text-muted);flex-shrink:0;}
   @media (max-width:640px){ .home-topic-grid{grid-template-columns:1fr;} }
 
+  /* ---- EDITOR-ONLY styles start here — stripped on Publish ---- */
   /* ---------------- EDITOR (edit mode) ---------------- */
   .editor-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
   .editor-toolbar input.topic-title{font-family:var(--font-display);font-size:1.5rem;font-weight:700;border:none;border-bottom:2px solid var(--paper-line);background:transparent;padding:4px 2px;flex:1;min-width:200px;color:var(--ink);}
   .editor-toolbar input.topic-title:focus{outline:none;border-color:var(--accent);}
   .save-btn{background:var(--ink);color:#fff;border:none;padding:9px 18px;border-radius:999px;font-size:.85rem;font-weight:600;cursor:pointer;}
   .save-btn:hover{background:var(--ink-soft);}
+  .save-btn-bottom{display:flex;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--paper-line);}
   .toast{position:fixed;bottom:24px;right:24px;background:var(--ink);color:#fff;padding:10px 18px;border-radius:8px;font-size:.85rem;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.3);transition:opacity .3s,transform .3s;}
   .toast.hidden{opacity:0;transform:translateY(8px);pointer-events:none;}
 
+  /* Topic lock banner */
+  .topic-lock-banner{display:flex;align-items:center;gap:10px;background:#FBE9E7;border:1px solid #f5c6c2;border-radius:var(--radius);padding:12px 16px;margin-bottom:16px;font-size:.88rem;color:#B3261E;}
+  .topic-lock-banner .lock-icon{font-size:1.2rem;flex-shrink:0;}
+  .topic-lock-banner strong{font-weight:700;}
+  .topic-lock-banner .lock-dismiss{margin-left:auto;background:none;border:none;color:#B3261E;cursor:pointer;font-size:1rem;padding:2px 6px;border-radius:4px;}
+  .topic-lock-banner .lock-dismiss:hover{background:rgba(179,38,30,.1);}
+
+  /* Rich-text editor block */
   .block-card{border:1px solid var(--paper-line);border-radius:var(--radius);background:var(--paper-raised);margin-bottom:14px;overflow:hidden;}
   .block-head{display:flex;align-items:center;gap:8px;background:#F3EFE6;padding:7px 12px;font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text-muted);}
   .block-head .block-actions{margin-left:auto;display:flex;gap:2px;}
@@ -204,14 +247,94 @@
   select.block-select{border:1px solid var(--paper-line);border-radius:6px;padding:5px 8px;font-size:.82rem;font-family:inherit;background:#fff;}
   input.block-input, textarea.block-input{width:100%;border:1px solid var(--paper-line);border-radius:6px;padding:8px 10px;font-size:.9rem;font-family:inherit;margin-top:6px;}
   textarea.block-input{resize:vertical;min-height:70px;}
-  .mini-toolbar{display:flex;gap:4px;margin-bottom:6px;}
-  .mini-toolbar button{border:1px solid var(--paper-line);background:#fff;border-radius:4px;width:26px;height:26px;cursor:pointer;font-size:.8rem;}
-  .mini-toolbar button:hover{border-color:var(--accent);}
   .img-preview{max-width:220px;max-height:140px;border-radius:6px;border:1px solid var(--paper-line);display:block;margin-top:8px;}
   .add-block-bar{display:flex;flex-wrap:wrap;gap:8px;padding:14px;border:1px dashed var(--paper-line);border-radius:var(--radius);}
   .add-block-bar button{background:var(--paper-raised);border:1px solid var(--paper-line);border-radius:999px;padding:7px 14px;font-size:.8rem;cursor:pointer;color:var(--text-main);}
   .add-block-bar button:hover{border-color:var(--accent);color:var(--accent-dark);}
 
+  /* Rich-text formatting toolbar */
+  .rte-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:3px;padding:5px 8px;background:#F7F4EE;border:1px solid var(--paper-line);border-radius:6px 6px 0 0;border-bottom:none;}
+  .rte-format-sel{border:1px solid var(--paper-line);border-radius:4px;padding:3px 7px;font-size:.81rem;background:#fff;cursor:pointer;font-family:inherit;color:var(--ink);height:26px;}
+  .rte-btn{background:none;border:1px solid transparent;border-radius:4px;padding:3px 7px;font-size:.82rem;cursor:pointer;color:var(--text-main);line-height:1.3;font-family:inherit;height:26px;}
+  .rte-btn:hover{background:#EDE8DC;border-color:var(--paper-line);}
+  .rte-btn.is-active{background:#EDE8DC;border-color:var(--paper-line);font-weight:700;}
+  .rte-sep{width:1px;height:18px;background:var(--paper-line);margin:0 2px;flex-shrink:0;}
+  .rte-editable{border:1px solid var(--paper-line);border-radius:0 0 6px 6px;padding:10px 12px;min-height:80px;font-size:.95rem;line-height:1.7;outline:none;background:#fff;}
+  .rte-editable:focus{background:#FDFBF7;border-color:var(--accent);}
+  /* Link colors: external = blue, internal = amber */
+  .rte-editable a.rte-ext-link{color:#1a56db;text-decoration:underline;}
+  .rte-editable a.rte-mail-link{color:#2F7A34;text-decoration:underline;}
+  .rte-editable a.rte-int-link{color:var(--accent-dark);text-decoration:underline;}
+  .article-body a.rte-ext-link{color:#1a56db;text-decoration:underline;}
+  .article-body a.rte-mail-link{color:#2F7A34;text-decoration:underline;}
+  .article-body a.rte-int-link{color:var(--accent-dark);text-decoration:underline;}
+  /* Table in RTE */
+  .rte-editable table{border-collapse:collapse;width:100%;margin:8px 0;}
+  .rte-editable table td,.rte-editable table th{border:1px solid var(--paper-line);padding:6px 10px;font-size:.9rem;min-width:60px;}
+  .rte-editable table th{background:#F3EFE6;font-weight:700;}
+  /* Lists in RTE */
+  .rte-editable ul,.rte-editable ol{margin:4px 0 4px 22px;}
+  .rte-editable ul ul{margin:2px 0 2px 18px;list-style-type:circle;}
+  .rte-editable ul ul ul{list-style-type:square;}
+  /* Inline code + code block in RTE */
+  .rte-editable code{font-family:Consolas,'Courier New',monospace;background:#EFEAE0;padding:1px 5px;border-radius:3px;font-size:.88em;color:#B3261E;}
+  .rte-editable pre{font-family:Consolas,'Courier New',monospace;background:#1E1E2E;color:#CDD6F4;padding:12px 14px;border-radius:6px;overflow-x:auto;font-size:.85rem;margin:8px 0;line-height:1.5;white-space:pre;}
+  /* Inline callout in RTE — matches internal callout block style */
+  .rte-editable .rte-callout{display:flex;gap:12px;border-left:3px solid var(--accent);background:#FBF1E1;padding:13px 16px;border-radius:0 var(--radius) var(--radius) 0;margin:12px 0;font-size:.92rem;line-height:1.5;}
+  .rte-editable .rte-callout .rte-callout-icon{width:18px;height:18px;flex-shrink:0;margin-top:2px;color:var(--accent-dark);}
+  .rte-editable .rte-callout .rte-callout-icon svg{width:18px;height:18px;}
+  .rte-editable .rte-callout .rte-callout-inner{flex:1;min-width:0;}
+  .rte-editable .rte-callout .rte-callout-title{font-weight:700;margin-bottom:3px;display:block;}
+  .rte-editable .rte-callout.rte-callout-note{border-left-color:#2E5F9E;background:#E7EEF7;}
+  .rte-editable .rte-callout.rte-callout-note .rte-callout-icon,.rte-editable .rte-callout.rte-callout-note .rte-callout-title{color:#2E5F9E;}
+  .rte-editable .rte-callout.rte-callout-tip{border-left-color:#2F7A34;background:#E5F2E3;}
+  .rte-editable .rte-callout.rte-callout-tip .rte-callout-icon,.rte-editable .rte-callout.rte-callout-tip .rte-callout-title{color:#2F7A34;}
+  .rte-editable .rte-callout.rte-callout-warning{border-left-color:var(--accent-dark);background:#FBF1E1;}
+  .rte-editable .rte-callout.rte-callout-warning .rte-callout-icon,.rte-editable .rte-callout.rte-callout-warning .rte-callout-title{color:var(--accent-dark);}
+  .rte-editable .rte-callout.rte-callout-caution{border-left-color:#B3261E;background:#FBE9E7;}
+  .rte-editable .rte-callout.rte-callout-caution .rte-callout-icon,.rte-editable .rte-callout.rte-callout-caution .rte-callout-title{color:#B3261E;}
+  .rte-editable .rte-callout.rte-callout-important{border-left-color:#6B4FA0;background:#EFE7F7;}
+  .rte-editable .rte-callout.rte-callout-important .rte-callout-icon,.rte-editable .rte-callout.rte-callout-important .rte-callout-title{color:#6B4FA0;}
+  /* Nested list indents in RTE */
+  .rte-editable ol ol,.rte-editable ul ol{list-style-type:lower-alpha;margin:2px 0 2px 18px;}
+  .rte-editable ol ol ol{list-style-type:lower-roman;}
+  /* Headings inside RTE */
+  .rte-editable h1{font-size:1.7rem;font-weight:700;margin:8px 0 4px;}
+  .rte-editable h2{font-size:1.35rem;font-weight:700;margin:8px 0 4px;}
+  .rte-editable h3{font-size:1.1rem;font-weight:600;margin:8px 0 4px;}
+  /* Inline topic picker */
+  .rte-topic-picker{position:fixed;z-index:250;background:#fff;border:1px solid var(--paper-line);border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.22);width:260px;max-height:240px;display:flex;flex-direction:column;overflow:hidden;}
+  .rte-topic-picker input{border:none;border-bottom:1px solid var(--paper-line);padding:8px 12px;font-size:.85rem;outline:none;font-family:inherit;}
+  .rte-topic-picker-list{overflow-y:auto;flex:1;}
+  .rte-topic-picker-item{display:block;width:100%;background:none;border:none;padding:7px 12px;font-size:.83rem;text-align:left;cursor:pointer;color:var(--text-main);}
+  .rte-topic-picker-item:hover,.rte-topic-picker-item.is-focused{background:#F1ECE1;}
+  /* Callout select in picker */
+  .rte-callout-picker{position:fixed;z-index:250;background:#fff;border:1px solid var(--paper-line);border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.22);width:180px;overflow:hidden;}
+  .rte-callout-picker button{display:block;width:100%;background:none;border:none;padding:8px 14px;font-size:.84rem;text-align:left;cursor:pointer;}
+  .rte-callout-picker button:hover{background:#F1ECE1;}
+
+  /* Hyperlink modal (URL + Email tabs only now) */
+  .rte-modal-overlay{display:none;position:fixed;inset:0;background:rgba(20,18,15,.45);z-index:210;align-items:center;justify-content:center;padding:20px;}
+  .rte-modal-overlay.is-open{display:flex;}
+  .rte-modal-box{background:var(--paper-raised);border-radius:10px;width:100%;max-width:420px;box-shadow:0 20px 56px rgba(0,0,0,.3);}
+  .rte-modal-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--paper-line);}
+  .rte-modal-head h3{margin:0;font-family:var(--font-display);font-size:1rem;color:var(--ink);}
+  .rte-modal-close{background:none;border:none;font-size:1.2rem;line-height:1;cursor:pointer;color:var(--text-muted);}
+  .rte-modal-close:hover{color:var(--ink);}
+  .rte-modal-body{padding:16px 18px;}
+  .rte-modal-tabs{display:flex;gap:0;border-bottom:1px solid var(--paper-line);margin-bottom:14px;}
+  .rte-modal-tab{background:none;border:none;border-bottom:2px solid transparent;padding:8px 14px;font-size:.83rem;font-weight:600;cursor:pointer;color:var(--text-muted);margin-bottom:-1px;}
+  .rte-modal-tab.is-active{color:var(--ink);border-bottom-color:var(--accent);}
+  .rte-modal-pane{display:none;}
+  .rte-modal-pane.is-active{display:block;}
+  .rte-field{margin-bottom:12px;}
+  .rte-field label{display:block;font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-muted);margin-bottom:5px;}
+  .rte-field input,.rte-field select{width:100%;border:1px solid var(--paper-line);border-radius:6px;padding:8px 10px;font-size:.88rem;font-family:inherit;background:#fff;}
+  .rte-field input:focus,.rte-field select:focus{outline:none;border-color:var(--accent);}
+  .rte-insert-btn{background:var(--ink);color:#fff;border:none;padding:9px 20px;border-radius:999px;font-size:.85rem;font-weight:600;cursor:pointer;}
+  .rte-insert-btn:hover{background:var(--ink-soft);}
+
+  /* ---- EDITOR-ONLY styles end here ---- */
   @media (max-width:1180px){
     .kb-shell{grid-template-columns:var(--sidebar-w) 1fr;grid-template-areas:"topbar topbar" "sidebar main" "footer footer";}
     .rightbar-mobile-btn{display:inline-flex;}
@@ -254,7 +377,7 @@
   }
   /* keep any long words, URLs, or tables from forcing horizontal scroll on narrow screens */
   .main, .article-body{max-width:100%;overflow-wrap:anywhere;word-break:break-word;}
-  .article-body table{display:block;max-width:100%;overflow-x:auto;}
+  /* article-body table overflow handled by rte-content rule above (display:table with overflow-x wrapper) */
 
   /* revert button (kept outside the editor-only block above so it also
      survives into the published static site's stylesheet) */
@@ -479,8 +602,7 @@
 </div>
 
 <div class="toast hidden" id="toast">Saved</div>
-
-<div class="img-lightbox" id="imgLightbox"><img src="" alt=""><span class="img-lightbox-hint">Release to close</span></div>
+<div class="img-lightbox-overlay" id="imgLightbox"><img id="imgLightboxImg" alt=""></div>
 
 <div class="modal-overlay" id="confirmOverlay">
   <div class="modal-box" style="max-width:420px;">
@@ -538,6 +660,57 @@
   </div>
 </div>
 
+<!-- Rich-text hyperlink / table insert modal -->
+<div class="rte-modal-overlay" id="rteLinkTableOverlay">
+  <div class="rte-modal-box">
+    <div class="rte-modal-head">
+      <h3 id="rteLinkTableTitle">Insert Link or Table</h3>
+      <button class="rte-modal-close" id="rteLinkTableClose">✕</button>
+    </div>
+    <div class="rte-modal-body">
+      <div class="rte-modal-tabs" id="rteLinkTableTabs">
+        <button class="rte-modal-tab is-active" data-tab="url">🔗 URL</button>
+        <button class="rte-modal-tab" data-tab="mail">✉ Email</button>
+        <button class="rte-modal-tab" data-tab="topic">📄 Topic Link</button>
+        <button class="rte-modal-tab" data-tab="table">⊞ Table</button>
+      </div>
+      <!-- URL pane -->
+      <div class="rte-modal-pane is-active" id="rtePane-url">
+        <div class="rte-field"><label>Display text</label><input type="text" id="rteLinkText-url" placeholder="Link label"></div>
+        <div class="rte-field"><label>URL</label><input type="url" id="rteLinkUrl" placeholder="https://example.com"></div>
+        <button class="rte-insert-btn" id="rteInsertUrl">Insert Link ↗</button>
+      </div>
+      <!-- Email pane -->
+      <div class="rte-modal-pane" id="rtePane-mail">
+        <div class="rte-field"><label>Display text</label><input type="text" id="rteLinkText-mail" placeholder="Send us an email"></div>
+        <div class="rte-field"><label>Email address</label><input type="email" id="rteLinkMail" placeholder="support@example.com"></div>
+        <button class="rte-insert-btn" id="rteInsertMail">Insert Email Link</button>
+      </div>
+      <!-- Internal topic link pane -->
+      <div class="rte-modal-pane" id="rtePane-topic">
+        <div class="rte-field"><label>Select topic</label>
+          <select id="rteLinkTopicSel"></select>
+        </div>
+        <div class="rte-field"><label>Display text (leave blank to use topic title)</label><input type="text" id="rteLinkText-topic" placeholder="optional"></div>
+        <button class="rte-insert-btn" id="rteInsertTopic">Insert Topic Link</button>
+      </div>
+      <!-- Table pane -->
+      <div class="rte-modal-pane" id="rtePane-table">
+        <div style="display:flex;gap:12px;">
+          <div class="rte-field" style="flex:1;"><label>Rows</label><input type="number" id="rteTableRows" value="3" min="1" max="20"></div>
+          <div class="rte-field" style="flex:1;"><label>Columns</label><input type="number" id="rteTableCols" value="3" min="1" max="10"></div>
+        </div>
+        <div class="rte-field" style="margin-top:4px;">
+          <label style="display:flex;align-items:center;gap:8px;text-transform:none;font-size:.88rem;font-weight:600;">
+            <input type="checkbox" id="rteTableHeader" checked style="width:auto;"> Bold first row (header)
+          </label>
+        </div>
+        <button class="rte-insert-btn" id="rteInsertTable">Insert Table</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="entityModalOverlay">
   <div class="modal-box" style="max-width:420px;">
     <div class="modal-head"><h2 id="entityModalTitle">Add New Product</h2><button class="modal-close" id="entityModalCloseX">✕</button></div>
@@ -578,38 +751,31 @@ function uid(prefix){ return prefix + '_' + Math.random().toString(36).slice(2,9
 function slugify(s){ return String(s).toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,''); }
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
 function today(){ var d=new Date(); var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return d.getDate()+' '+months[d.getMonth()]+' '+d.getFullYear(); }
-
-/* Builds the on-repo filename for a topic's own content file, e.g.
-   "topics/sample-product-getting-started-quick-start-guide.json".
-   Computed once at creation time and stored on the topic's metadata
-   (t.file) so later renames don't orphan/rename files on every edit. */
-function topicFileName(prod, sec, title){
-  return 'topics/' + slugify(prod.name) + '-' + slugify(sec.title) + '-' + slugify(title) + '-' + uid('t') + '.json';
+/* Plain-text helper: whatever gets typed into a block is stored and saved
+   as pure text (no embedded markup), then escaped + line-broken on render. */
+function textToHtml(s){ return escapeHtml(String(s||'')).replace(/\n/g,'<br>'); }
+/* Every topic's real content lives in its own file, named from its
+   product/section/topic slugs, e.g. "nova-cloud-getting-started-quick-start-guide.json".
+   data.json only ever stores the pointer (t.file), never the blocks. */
+function topicFile(prod, sec, t){
+  return slugify(prod?prod.name:'product')+'-'+slugify(sec?sec.title:'section')+'-'+slugify(t.title||'topic')+'.json';
 }
+
 function defaultData(){
   var p1 = uid('prod');
   var s1 = uid('sec');
   var t1 = uid('top');
-  var prod = {id:p1, name:'Sample Product', category:'General'};
-  var sec = {id:s1, productId:p1, title:'Getting Started', order:0};
-  var topicTitle = 'Quick Start Guide';
   return {
-    products: [prod],
-    sections: [sec],
-    /* NOTE: topics here are metadata only — no `blocks`. Each topic's
-       content lives in its own file (see topicFileName) and is loaded
-       lazily via ensureTopicLoaded() the first time it's opened. This
-       keeps data.json small and fast to fetch/render no matter how
-       many topics the knowledge base grows to. */
-    topics: [ {id:t1, sectionId:s1, title:topicTitle, order:0, updated: today(), file: topicFileName(prod, sec, topicTitle)} ],
+    products: [ {id:p1, name:'Sample Product', category:'General'} ],
+    sections: [ {id:s1, productId:p1, title:'Getting Started', order:0} ],
+    topics: [ {id:t1, sectionId:s1, title:'Quick Start Guide', order:0, updated: today(), _loaded:true,
+      blocks: [
+        {id:uid('blk'), type:'paragraph', text:'Replace this with your own content — add headings, images, callouts and lists using the toolbar below.'},
+        {id:uid('blk'), type:'callout', calloutType:'tip', text:'Use the Edit toggle at the top to author topics, then Publish to write this whole knowledge base out as per-topic files.'}
+      ] }
+    ],
     changelog: [ {date: today(), tag:'added', product:'Sample Product', text:'Knowledge base created.'} ]
   };
-}
-function defaultTopicBlocks(){
-  return [
-    {id:uid('blk'), type:'paragraph', html:'Replace this with your own content — add headings, images, callouts and lists using the toolbar below.'},
-    {id:uid('blk'), type:'callout', calloutType:'tip', html:'Use the <b>Edit</b> toggle at the top to author topics, then <b>Generate site</b> to export a standalone HTML file.'}
-  ];
 }
 
 var data = null;
@@ -617,78 +783,6 @@ var favourites = [];
 var currentProductId = null;
 var state = { mode:'preview', articleId:null, showingHistory:false };
 var homeState = { productId:null };
-
-/* ---------- per-topic content cache ----------
-   topicContent[id] = { blocks:[...], dirty:bool }. `dirty` marks a topic
-   whose content file needs to be (re)written on the next Publish, so a
-   large KB only ever republishes the handful of topics that changed
-   instead of rewriting everything every time. */
-var topicContent = {};
-var dirtyTopicIds = {};
-function topicLocalKey(id){ return 'kb-topic-content-' + id; }
-function markTopicDirty(id){
-  dirtyTopicIds[id] = true;
-  try{ localStorage.setItem('kb_dirty_topics', JSON.stringify(Object.keys(dirtyTopicIds))); }catch(e){}
-}
-function unmarkTopicDirty(id){
-  delete dirtyTopicIds[id];
-  try{ localStorage.setItem('kb_dirty_topics', JSON.stringify(Object.keys(dirtyTopicIds))); }catch(e){}
-}
-function clearDirtyTopics(){
-  dirtyTopicIds = {};
-  try{ localStorage.removeItem('kb_dirty_topics'); }catch(e){}
-}
-(function restoreDirtyTopics(){
-  try{
-    var ids = JSON.parse(localStorage.getItem('kb_dirty_topics') || '[]');
-    ids.forEach(function(id){ dirtyTopicIds[id] = true; });
-  }catch(e){}
-})();
-/* Always returns a live, mutable array for this topic's blocks (creating
-   an empty one if nothing has been loaded yet) so editor code can read
-   and reorder/splice it directly. */
-function topicBlocks(t){
-  if (!topicContent[t.id]) topicContent[t.id] = { blocks: [], dirty:false };
-  if (!topicContent[t.id].blocks) topicContent[t.id].blocks = [];
-  return topicContent[t.id].blocks;
-}
-function saveTopicContent(topicId){
-  var tc = topicContent[topicId];
-  if (!tc) return;
-  storageSet(topicLocalKey(topicId), JSON.stringify(tc.blocks));
-  markTopicDirty(topicId);
-}
-/* Loads a topic's blocks the first time it's needed: from GitHub (the
-   shared source of truth, when publish settings are configured) or the
-   local mirror, falling back to an empty topic. Cheap to call repeatedly
-   — resolves instantly once cached in topicContent. */
-function ensureTopicLoaded(topicId){
-  if (topicContent[topicId] && topicContent[topicId].blocks) return Promise.resolve(topicContent[topicId].blocks);
-  var t = getTopic(topicId);
-  if (!t) return Promise.resolve([]);
-  var settings = GITHUB_SETTINGS;
-  var configured = settings && settings.owner && settings.repo && settings.path && settings.branch && t.file;
-  var fromLocal = function(){
-    return storageGet(topicLocalKey(topicId)).then(function(v){
-      try{ return v ? JSON.parse(v) : []; }catch(e){ return []; }
-    });
-  };
-  var loadPromise = configured
-    ? ghGetFile(siblingPath(t.file)).then(function(file){
-        if (!file || !file.text) throw new Error('content file not published yet');
-        var parsed = JSON.parse(file.text);
-        return parsed.blocks || [];
-      }).catch(function(e){
-        console.warn('Could not load topic content "'+t.file+'" from GitHub, using local copy:', e.message);
-        return fromLocal();
-      })
-    : fromLocal();
-  return loadPromise.then(function(blocks){
-    topicContent[topicId] = { blocks: blocks || [], dirty:false };
-    storageSet(topicLocalKey(topicId), JSON.stringify(blocks || []));
-    return topicContent[topicId].blocks;
-  });
-}
 
 /* Storage abstraction: window.storage only exists inside the Claude
    artifact preview. Opened as a plain local file (which is the normal
@@ -711,7 +805,7 @@ function storageSet(key, value){
 function loadAll(cb){
   var pending = 2;
   function done(){ pending--; if (pending===0) cb(); }
-  loadKbMeta().then(function(d){ data = d; done(); });
+  loadKbData().then(function(d){ data = d; done(); });
   storageGet(FAV_KEY).then(function(v){
     try{ favourites = v ? (JSON.parse(v) || []) : []; }catch(e){ favourites = []; }
     done();
@@ -722,38 +816,59 @@ function loadAll(cb){
    in sync across browsers/devices) over the local cached copy. Only
    falls back to local storage / defaults when GitHub publish settings
    haven't been configured yet in this browser, or the fetch fails
-   (offline, bad token, file not published yet, etc). This is metadata
-   only (products/sections/topic titles/changelog) — topic content is
-   loaded separately and lazily, see ensureTopicLoaded(). */
-function loadLocalMeta(){
+   (offline, bad token, file not published yet, etc). */
+function loadLocalData(){
   return storageGet(DATA_KEY).then(function(v){
-    if (v){ try{ return JSON.parse(v); }catch(e){} }
-    var d = defaultData();
-    var sample = d.topics[0];
-    if (sample){
-      topicContent[sample.id] = { blocks: defaultTopicBlocks(), dirty:false };
-      storageSet(topicLocalKey(sample.id), JSON.stringify(topicContent[sample.id].blocks));
-    }
+    var d;
+    try{ d = v ? JSON.parse(v) : defaultData(); }catch(e){ d = defaultData(); }
+    /* Local/offline copies always carry full blocks already, so mark
+       every topic pre-loaded — no lazy fetch needed for these. */
+    (d.topics||[]).forEach(function(t){ t._loaded = true; t.blocks = t.blocks || []; });
     return d;
   });
 }
-function loadKbMeta(){
+function loadKbData(){
   var settings = GITHUB_SETTINGS;
   if (!settings || !settings.owner || !settings.repo || !settings.path || !settings.branch){
-    return loadLocalMeta();
+    return loadLocalData();
   }
   return ghGetFile(siblingPath('data.json')).then(function(file){
-    if (!file || !file.text) throw new Error('data.json has not been published yet');
-    var parsed = JSON.parse(file.text);
-    storageSet(DATA_KEY, JSON.stringify(parsed)); /* keep a local mirror for offline fallback */
+    if (!file || !file.content) throw new Error('data.json has not been published yet');
+    var parsed = JSON.parse(decodeURIComponent(escape(atob(file.content.replace(/\n/g,'')))));
+    /* data.json is metadata-only (fast to fetch even with thousands of
+       topics) — each topic's blocks are fetched on demand from its own
+       file the moment that topic is actually opened. */
+    (parsed.topics||[]).forEach(function(t){ t._loaded = false; t.blocks = []; });
     return parsed;
   }).catch(function(e){
     console.warn('Could not load data.json from GitHub, showing local copy instead:', e.message);
-    showToast('Could not load latest content from GitHub ('+e.message+') — showing local copy', true);
-    return loadLocalMeta();
+    showToast('Could not load latest content from GitHub — showing local copy', true);
+    return loadLocalData();
   });
 }
-function saveMeta(){
+/* Lazily fetches a single topic's content file (product-section-topic.json)
+   the first time it's opened, and caches it on the topic object afterwards.
+   No-ops instantly for topics that already have their blocks (new/unpublished
+   topics, or anything loaded from the local/offline mirror). */
+function ensureTopicContent(t, cb){
+  if (!t || t._loaded){ cb(); return; }
+  var settings = GITHUB_SETTINGS;
+  if (!t.file || !settings || !settings.owner){ t.blocks = t.blocks || []; t._loaded = true; cb(); return; }
+  ghGetFile(siblingPath(t.file)).then(function(file){
+    if (!file || !file.content) throw new Error('"'+t.file+'" has not been published yet');
+    var parsed = JSON.parse(decodeURIComponent(escape(atob(file.content.replace(/\n/g,'')))));
+    t.blocks = parsed.blocks || [];
+    t._loaded = true;
+    cb();
+  }).catch(function(e){
+    console.warn('Could not load content for topic "'+t.title+'":', e.message);
+    showToast('Could not load "'+t.title+'" content', true);
+    t.blocks = t.blocks || [];
+    t._loaded = true;
+    cb();
+  });
+}
+function saveData(){
   storageSet(DATA_KEY, JSON.stringify(data));
 }
 function saveFavs(){
@@ -836,7 +951,7 @@ function renderProductSelect(){
       var id = uid('prod');
       data.products.push({id:id, name:name, category:category});
       currentProductId = id;
-      saveMeta(); renderProductSelect(); renderNavTree();
+      saveData(); renderProductSelect(); renderNavTree();
     }});
   };
 
@@ -846,7 +961,7 @@ function renderProductSelect(){
     if (!p) return;
     openEntityModal({ kind:'product', mode:'rename', currentValue:p.name, currentCategory:p.category||'General', onSave:function(name, category){
       p.name = name; p.category = category;
-      saveMeta(); renderProductSelect(); renderNavTree();
+      saveData(); renderProductSelect(); renderNavTree();
     }});
   };
 }
@@ -927,7 +1042,7 @@ function renderNavTree(){
   document.getElementById('addSectionBtn').onclick = function(){
     openEntityModal({ kind:'section', mode:'add', onSave:function(title){
       data.sections.push({id:uid('sec'), productId:product.id, title:title, order:sectionsFor(product.id).length});
-      saveMeta(); renderNavTree();
+      saveData(); renderNavTree();
     }});
   };
 }
@@ -954,22 +1069,9 @@ function bindTreeEvents(){
       var secId = el.getAttribute('data-add-topic');
       openEntityModal({ kind:'topic', mode:'add', onSave:function(title){
         var id = uid('top');
-        var sec = getSection(secId);
-        var prod = getProduct(sec.productId);
-        var file = topicFileName(prod, sec, title);
-        data.topics.push({id:id, sectionId:secId, title:title, order:topicsFor(secId).length, updated: today(), file:file});
-        topicContent[id] = { blocks: [], dirty:false };
-        saveTopicContent(id); /* creates the local mirror immediately */
-        logChange('added', prod.name, title);
-        saveMeta(); renderNavTree(); openTopic(id);
-        /* Auto-create the content file on GitHub right away, so it exists
-           the moment the topic does rather than only after Publish. */
-        var settings = GITHUB_SETTINGS;
-        if (settings && settings.owner && settings.repo && settings.path && settings.branch && GITHUB_TOKEN){
-          ghPutFile(siblingPath(file), JSON.stringify({ id:id, blocks:[] }, null, 2), 'Create topic file: '+title, null)
-            .then(function(){ unmarkTopicDirty(id); })
-            .catch(function(e){ console.warn('Could not auto-create topic file on GitHub (will publish it on next Publish instead):', e.message); });
-        }
+        data.topics.push({id:id, sectionId:secId, title:title, order:topicsFor(secId).length, updated: today(), blocks:[], _loaded:true});
+        logChange('added', getProduct(getSection(secId).productId).name, title);
+        saveData(); renderNavTree(); openTopic(id);
       }});
     });
   });
@@ -980,7 +1082,7 @@ function bindTreeEvents(){
       if (!top) return;
       openEntityModal({ kind:'topic', mode:'rename', currentValue:top.title, onSave:function(title){
         top.title = title;
-        saveMeta(); renderNavTree();
+        saveData(); renderNavTree();
         if (state.articleId===top.id) renderMain();
       }});
     });
@@ -994,10 +1096,8 @@ function bindTreeEvents(){
         if (delTopic){ var delSec=getSection(delTopic.sectionId); var delProd=delSec?getProduct(delSec.productId):null;
           logChange('removed', delProd?delProd.name:'—', 'Deleted topic "'+delTopic.title+'".'); }
         data.topics = data.topics.filter(function(t){return t.id!==id;});
-        delete topicContent[id];
-        unmarkTopicDirty(id);
         if (state.articleId===id) state.articleId=null;
-        saveMeta(); renderNavTree(); renderMain();
+        saveData(); renderNavTree(); renderMain();
       });
     });
   });
@@ -1006,7 +1106,7 @@ function bindTreeEvents(){
       e.stopPropagation();
       var sec = getSection(el.getAttribute('data-rename-sec'));
       openEntityModal({ kind:'section', mode:'rename', currentValue:sec.title, onSave:function(title){
-        sec.title = title; saveMeta(); renderNavTree();
+        sec.title = title; saveData(); renderNavTree();
       }});
     });
   });
@@ -1020,7 +1120,7 @@ function bindTreeEvents(){
           logChange('removed', delProd?delProd.name:'—', 'Deleted section "'+delSec.title+'" and its topics.'); }
         data.topics = data.topics.filter(function(t){return t.sectionId!==id;});
         data.sections = data.sections.filter(function(s){return s.id!==id;});
-        saveMeta(); renderNavTree(); renderMain();
+        saveData(); renderNavTree(); renderMain();
       });
     });
   });
@@ -1062,25 +1162,143 @@ function calloutHtml(type, html){
   return '<div class="callout callout-'+type+'"><span class="callout-icon">'+CALLOUT_ICONS[type]+'</span>'+
          '<div class="callout-body"><div class="callout-title">'+CALLOUT_LABELS[type]+'</div>'+html+'</div></div>';
 }
+function richHtmlToPreview(b){
+  if (b.html != null) return b.html;
+  return textToHtml(b.text != null ? b.text : '');
+}
 function blockToHtml(b){
-  if (b.type==='heading'){ var lvl=b.level||2; return '<h'+lvl+' id="blk-'+b.id+'">'+ (b.html||'') +'</h'+lvl+'>'; }
-  if (b.type==='paragraph'){ return '<p>'+(b.html||'')+'</p>'; }
-  if (b.type==='image'){ return '<figure><img src="'+(b.src||'')+'" alt="'+escapeHtml(b.alt||'')+'">'+(b.caption?'<figcaption>'+escapeHtml(b.caption)+'</figcaption>':'')+'</figure>'; }
-  if (b.type==='callout'){ return calloutHtml(b.calloutType||'note', '<p>'+(b.html||'')+'</p>'); }
+  /* 'text' = unified block (replaces old heading + paragraph) */
+  if (b.type==='text'){ return '<div id="blk-'+b.id+'" class="rte-content">'+richHtmlToPreview(b)+'</div>'; }
+  /* Legacy aliases */
+  if (b.type==='heading'){ var lvl=b.level||2; return b.html ? '<div id="blk-'+b.id+'">'+b.html+'</div>' : '<h'+lvl+' id="blk-'+b.id+'">'+ textToHtml(b.text!=null?b.text:'') +'</h'+lvl+'>'; }
+  if (b.type==='paragraph'){ return b.html ? '<div id="blk-'+b.id+'">'+richHtmlToPreview(b)+'</div>' : '<p>'+textToHtml(b.text!=null?b.text:'')+'</p>'; }
+  if (b.type==='image'){ return '<figure><img src="'+(b.src||'')+'" alt="'+escapeHtml(b.alt||'')+'" data-lightbox="1">'+(b.caption?'<figcaption>'+escapeHtml(b.caption)+'</figcaption>':'')+'</figure>'; }
+  if (b.type==='callout'){ return calloutHtml(b.calloutType||'note', richHtmlToPreview(b)); }
   if (b.type==='list'){
     var tag = b.ordered ? 'ol' : 'ul';
     var items = (b.items||[]).map(function(i){ return '<li>'+escapeHtml(i)+'</li>'; }).join('');
     return '<'+tag+'>'+items+'</'+tag+'>';
   }
-  if (b.type==='code'){ return '<pre><code>'+escapeHtml(b.text||'')+'</code></pre>'; }
+  if (b.type==='code'){ return '<pre><code style="font-family:Consolas,\'Courier New\',monospace;">'+escapeHtml(b.text||'')+'</code></pre>'; }
   return '';
 }
 
 /* ============================================================
-   PRINT — printer-icon dropdown shown on every topic. "Print"
-   still opens the normal browser print dialog. "Save as PDF"
-   renders the topic straight to a PDF file and downloads it
-   immediately — no print dialog / destination picker involved.
+   IMAGE COMPRESSION — every uploaded image is downscaled (max 1600px
+   on the long edge) and re-encoded (WebP when supported, else JPEG)
+   at high quality before it's ever stored, so the knowledge base
+   doesn't balloon with full-resolution camera/screenshot uploads.
+   ============================================================ */
+function compressImage(file, cb){
+  var reader = new FileReader();
+  reader.onload = function(){
+    var img = new Image();
+    img.onload = function(){
+      var MAX = 1600;
+      var w = img.naturalWidth, h = img.naturalHeight;
+      if (w > MAX || h > MAX){
+        if (w >= h){ h = Math.round(h * MAX / w); w = MAX; } else { w = Math.round(w * MAX / h); h = MAX; }
+      }
+      var canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      var ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      var out;
+      try{
+        out = canvas.toDataURL('image/webp', 0.88);
+        if (out.indexOf('data:image/webp') !== 0) throw new Error('webp unsupported');
+      }catch(e){
+        out = canvas.toDataURL('image/jpeg', 0.88);
+      }
+      cb(out.length < reader.result.length ? out : reader.result);
+    };
+    img.onerror = function(){ cb(reader.result); };
+    img.src = reader.result;
+  };
+  reader.onerror = function(){ cb(null); };
+  reader.readAsDataURL(file);
+}
+
+/* ============================================================
+   IMAGE LIGHTBOX — press and hold any article image to pop it up
+   full-size; release to close. Bound once, delegated, so it works
+   for every image rendered into the page from then on.
+   ============================================================ */
+(function initImageLightbox(){
+  var overlay, imgEl, holdTimer, holding = false;
+  function open(src, alt){
+    overlay = document.getElementById('imgLightbox');
+    imgEl = document.getElementById('imgLightboxImg');
+    if (!overlay || !imgEl) return;
+    imgEl.src = src; imgEl.alt = alt || '';
+    overlay.classList.add('is-open');
+    holding = true;
+  }
+  function close(){
+    if (overlay) overlay.classList.remove('is-open');
+    holding = false;
+  }
+  function start(e){
+    var img = e.target.closest && e.target.closest('.article-body img, .query-editable img');
+    if (!img) return;
+    clearTimeout(holdTimer);
+    holdTimer = setTimeout(function(){ open(img.src, img.alt); }, 320);
+  }
+  function stop(){ clearTimeout(holdTimer); if (holding) close(); }
+  document.addEventListener('pointerdown', start);
+  document.addEventListener('pointerup', stop);
+  document.addEventListener('pointercancel', stop);
+  document.addEventListener('mouseleave', function(e){ if (e.target===document.documentElement) stop(); });
+  document.addEventListener('contextmenu', function(e){ if (holding) e.preventDefault(); });
+})();
+
+/* ============================================================
+   PDF — "Save as PDF" renders the open topic straight to a
+   high-quality multi-page PDF and downloads it immediately
+   (html2canvas + jsPDF), no print dialog involved. "Print" still
+   uses the browser's native print dialog.
+   ============================================================ */
+function downloadTopicPdf(topicTitle){
+  var titleEl = document.querySelector('.article-title');
+  var bodyEl = document.querySelector('.article-body');
+  if (!bodyEl || !window.html2canvas || !window.jspdf){ window.print(); return; }
+  showFreeze('Preparing PDF…');
+  var wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed;left:-9999px;top:0;background:#fff;width:760px;padding:40px;font-family:'+getComputedStyle(document.body).fontFamily+';color:#201F23;';
+  wrap.innerHTML = '<h1 style="font-size:26px;font-weight:700;margin:0 0 20px;">'+escapeHtml(topicTitle||'')+'</h1>' + bodyEl.innerHTML;
+  document.body.appendChild(wrap);
+  window.html2canvas(wrap, {scale:3, useCORS:true, backgroundColor:'#ffffff'}).then(function(canvas){
+    document.body.removeChild(wrap);
+    var imgData = canvas.toDataURL('image/jpeg', 0.98);
+    var jsPDF = window.jspdf.jsPDF;
+    var pdf = new jsPDF({unit:'pt', format:'a4'});
+    var pageW = pdf.internal.pageSize.getWidth();
+    var pageH = pdf.internal.pageSize.getHeight();
+    var imgW = pageW;
+    var imgH = canvas.height * imgW / canvas.width;
+    var heightLeft = imgH, y = 0;
+    pdf.addImage(imgData, 'JPEG', 0, y, imgW, imgH, '', 'FAST');
+    heightLeft -= pageH;
+    while (heightLeft > 0){
+      y = heightLeft - imgH;
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, y, imgW, imgH, '', 'FAST');
+      heightLeft -= pageH;
+    }
+    pdf.save(((topicTitle||'document').toLowerCase().replace(/[^a-z0-9]+/g,'-')||'document')+'.pdf');
+    hideFreeze();
+  }).catch(function(e){
+    console.error('PDF generation failed', e);
+    if (document.body.contains(wrap)) document.body.removeChild(wrap);
+    hideFreeze();
+    showToast('PDF generation failed', true);
+  });
+}
+
+/* ============================================================
+   PRINT — printer-icon dropdown (Save as PDF / Print) shown on
+   every topic. "Save as PDF" downloads a rendered PDF directly;
+   "Print" still opens the native browser print dialog.
    ============================================================ */
 var PRINT_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>';
 function printMenuHtml(){
@@ -1091,40 +1309,6 @@ function printMenuHtml(){
       '<button type="button" data-print-action="print">🖨 Print</button>'+
     '</div></div>';
 }
-function downloadTopicPdf(topicTitle){
-  var articleEl = document.querySelector('.article-body');
-  if (!articleEl) return;
-  if (typeof html2pdf === 'undefined'){
-    showToast('PDF engine unavailable (no internet?) — opening print dialog instead', true);
-    window.print();
-    return;
-  }
-  var wrapper = document.createElement('div');
-  wrapper.style.padding = '18px 6px';
-  wrapper.style.fontFamily = getComputedStyle(document.body).fontFamily;
-  var h1 = document.createElement('h1');
-  h1.textContent = topicTitle || document.title;
-  h1.style.cssText = 'font-size:22px;margin:0 0 14px;';
-  wrapper.appendChild(h1);
-  var clone = articleEl.cloneNode(true);
-  clone.querySelectorAll('img').forEach(function(img){ img.style.cursor = 'default'; });
-  wrapper.appendChild(clone);
-  var filename = (topicTitle || 'topic').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') + '.pdf';
-  showToast('Preparing PDF…');
-  html2pdf().set({
-    margin: 12,
-    filename: filename,
-    image: { type:'jpeg', quality:0.95 },
-    html2canvas: { scale:2, useCORS:true, backgroundColor:'#ffffff' },
-    jsPDF: { unit:'mm', format:'a4', orientation:'portrait' },
-    pagebreak: { mode:['avoid-all','css','legacy'] }
-  }).from(wrapper).save().then(function(){
-    showToast('PDF downloaded');
-  }).catch(function(e){
-    console.error(e);
-    showToast('PDF generation failed: '+e.message, true);
-  });
-}
 function bindPrintMenu(topicTitle){
   var menu = document.getElementById('printMenu');
   var btn = document.getElementById('printBtn');
@@ -1134,7 +1318,7 @@ function bindPrintMenu(topicTitle){
     b.addEventListener('click', function(){
       menu.classList.remove('is-open');
       var action = b.getAttribute('data-print-action');
-      if (action === 'pdf'){ downloadTopicPdf(topicTitle); return; }
+      if (action==='pdf'){ downloadTopicPdf(topicTitle); return; }
       var prevTitle = document.title;
       document.title = topicTitle || prevTitle;
       var restored = false;
@@ -1144,30 +1328,6 @@ function bindPrintMenu(topicTitle){
       window.print();
     });
   });
-}
-/* ---------- image lightbox: press-and-hold an image to zoom it in ---------- */
-function bindImageLightbox(){
-  var overlay = document.getElementById('imgLightbox');
-  if (!overlay || overlay._bound) return;
-  overlay._bound = true;
-  var img = overlay.querySelector('img');
-  function open(src, alt){ img.src = src; img.alt = alt || ''; overlay.classList.add('is-open'); }
-  function close(){ overlay.classList.remove('is-open'); img.src = ''; }
-  document.addEventListener('mousedown', function(e){
-    var target = e.target.closest('.article-body img, .img-preview');
-    if (!target) return;
-    e.preventDefault();
-    open(target.src, target.alt);
-  });
-  document.addEventListener('mouseup', close);
-  document.addEventListener('mouseleave', close);
-  document.addEventListener('touchstart', function(e){
-    var target = e.target.closest('.article-body img, .img-preview');
-    if (!target) return;
-    open(target.src, target.alt);
-  }, {passive:true});
-  document.addEventListener('touchend', close);
-  document.addEventListener('touchcancel', close);
 }
 /* Close any open print / topbar-overflow menu on an outside click.
    Bound once here (not inside render functions) so it never piles up. */
@@ -1262,16 +1422,16 @@ function hideTopicSummary(){
   var section = document.getElementById('topicSummarySection');
   if (section) section.style.display = 'none';
 }
-function renderTopicSummary(t, blocks){
+function renderTopicSummary(t){
   var section = document.getElementById('topicSummarySection');
   var list = document.getElementById('topicSummaryList');
   if (!section || !list) return;
-  var headings = (blocks||[]).filter(function(b){ return b.type==='heading'; });
+  var headings = (t.blocks||[]).filter(function(b){ return b.type==='heading'; });
   if (!headings.length){ section.style.display = 'none'; list.innerHTML=''; return; }
   section.style.display = 'block';
   list.innerHTML = headings.map(function(b){
     var lvl = b.level||2;
-    var text = (b.html||'').replace(/<[^>]+>/g,'').trim() || 'Untitled section';
+    var text = (b.text!=null ? b.text : (b.html||'').replace(/<[^>]+>/g,'')).trim() || 'Untitled section';
     return '<li'+(lvl>=3?' style="padding-left:16px;"':'')+'><a href="#blk-'+b.id+'" data-jump="'+b.id+'">'+escapeHtml(text)+'</a></li>';
   }).join('');
   list.querySelectorAll('[data-jump]').forEach(function(el){
@@ -1294,10 +1454,10 @@ function renderArticle(main){
     '<div class="article-kicker">'+escapeHtml(prod.name)+' — '+escapeHtml(sec.title)+'</div>'+
     '<h1 class="article-title">'+escapeHtml(t.title)+'</h1>'+
     '<div class="article-meta"><span>Last updated '+escapeHtml(t.updated||today())+'</span>'+
-      '<button class="fav-toggle'+(isFav?' is-fav':'')+'" id="favToggleBtn">★ '+(isFav?'Saved to favourites':'Add to favourites')+'</button>'+
+      '<button class="fav-toggle'+(isFav?' is-fav':'')+'" id="favToggleBtn">★ '+(isFav?'Saved to favourites':'Favourite')+'</button>'+
       printMenuHtml()+
     '</div>'+
-    '<div class="article-body" id="articleBody"><p style="color:var(--text-muted);">Loading…</p></div>'+
+    '<div class="article-body">'+ (t.blocks||[]).map(blockToHtml).join('') + '</div>'+
     '<div class="topic-feedback" id="topicFeedback">'+
       '<span class="topic-feedback-question">Did you find the information useful?</span>'+
       '<span class="topic-feedback-buttons">'+
@@ -1308,13 +1468,7 @@ function renderArticle(main){
   document.getElementById('favToggleBtn').addEventListener('click', function(){ toggleFav(t.id); renderArticle(main); });
   bindPrintMenu(t.title);
   bindTopicFeedback();
-  hideTopicSummary();
-  ensureTopicLoaded(t.id).then(function(blocks){
-    if (state.articleId !== t.id) return; /* navigated away while this was loading */
-    var body = document.getElementById('articleBody');
-    if (body) body.innerHTML = blocks.map(blockToHtml).join('');
-    renderTopicSummary(t, blocks);
-  });
+  renderTopicSummary(t);
 }
 
 function bindTopicFeedback(){
@@ -1364,6 +1518,12 @@ function openTopic(topicId){
   var row = document.querySelector('[data-select-topic="'+topicId+'"]');
   if (row){ row.classList.add('is-active'); var p=row.closest('ul').closest('.nav-node'); if(p) p.classList.add('is-open'); }
   document.getElementById('historyLink').classList.remove('is-active');
+  var t = getTopic(topicId);
+  if (t && !t._loaded){
+    document.getElementById('mainArea').innerHTML = '<div class="empty-state">Loading…</div>';
+    ensureTopicContent(t, function(){ if (state.articleId===topicId) renderMain(); });
+    return;
+  }
   renderMain();
 }
 
@@ -1371,7 +1531,7 @@ var editSnapshot = null;
 function truncateText(s, n){ s = String(s||'').trim(); return s.length>n ? s.slice(0,n)+'…' : s; }
 function blockSnapshot(b){
   var text = '';
-  if (b.type==='heading' || b.type==='paragraph' || b.type==='callout') text = (b.html||'').replace(/<[^>]+>/g,'');
+  if (b.type==='heading' || b.type==='paragraph' || b.type==='callout') text = b.text!=null ? b.text : (b.html||'').replace(/<[^>]+>/g,'');
   else if (b.type==='code') text = b.text||'';
   else if (b.type==='list') text = (b.items||[]).join(' | ');
   else if (b.type==='image') text = b.alt||b.caption||'image';
@@ -1397,50 +1557,497 @@ function describeTopicChanges(before, after){
   if (!notes.length) notes.push('No visible content change.');
   return notes;
 }
+
+/* ============================================================
+   TOPIC LOCKING — prevents concurrent edits from two browser
+   tabs/windows. When a tab opens a topic in edit mode it writes
+   a timestamped lease to localStorage; every 10 s it refreshes
+   the timestamp. A second tab sees the stale lease and shows a
+   read-only lock banner instead of the editor.
+   ============================================================ */
+var LOCK_KEY_PREFIX = 'kb_topic_lock_';
+var LOCK_TTL = 15000;          /* ms — considered stale after 15 s */
+var LOCK_REFRESH = 10000;      /* ms — refresh interval */
+var lockRefreshTimer = null;
+var myTabId = Math.random().toString(36).slice(2);
+
+function lockKey(topicId){ return LOCK_KEY_PREFIX + topicId; }
+function acquireLock(topicId){
+  var lease = { tab: myTabId, ts: Date.now() };
+  try{ localStorage.setItem(lockKey(topicId), JSON.stringify(lease)); }catch(e){}
+}
+function releaseLock(topicId){
+  try{
+    var raw = localStorage.getItem(lockKey(topicId));
+    if (raw){ var l=JSON.parse(raw); if(l.tab===myTabId) localStorage.removeItem(lockKey(topicId)); }
+  }catch(e){}
+}
+function isLockedByOther(topicId){
+  try{
+    var raw = localStorage.getItem(lockKey(topicId));
+    if (!raw) return false;
+    var l = JSON.parse(raw);
+    if (l.tab === myTabId) return false;
+    if (Date.now() - l.ts > LOCK_TTL) return false; /* stale lease */
+    return true;
+  }catch(e){ return false; }
+}
+function startLockRefresh(topicId){
+  clearInterval(lockRefreshTimer);
+  lockRefreshTimer = setInterval(function(){ acquireLock(topicId); }, LOCK_REFRESH);
+}
+function stopLockRefresh(){
+  clearInterval(lockRefreshTimer);
+  lockRefreshTimer = null;
+}
+/* Release lock when leaving edit mode or changing topic */
+function releaseCurrentLock(){
+  stopLockRefresh();
+  if (state.articleId) releaseLock(state.articleId);
+}
+window.addEventListener('beforeunload', function(){ releaseCurrentLock(); });
+
+/* ============================================================
+   RICH-TEXT EDITOR HELPERS
+   ============================================================ */
+var rteActiveEl = null; /* the contenteditable currently in focus */
+var rteSavedRange = null;
+
+function rteSaveRange(){
+  var sel = window.getSelection();
+  if (sel && sel.rangeCount > 0) rteSavedRange = sel.getRangeAt(0).cloneRange();
+}
+function rteRestoreRange(){
+  if (!rteSavedRange) return;
+  var sel = window.getSelection();
+  try{ sel.removeAllRanges(); sel.addRange(rteSavedRange); }catch(e){}
+}
+function rteExec(cmd, val){
+  if (rteActiveEl) rteActiveEl.focus();
+  rteRestoreRange();
+  document.execCommand(cmd, false, val || null);
+}
+function rteToolbarHtml(blkId, isTextBlock){
+  var fmtSel = isTextBlock ?
+    '<select class="rte-format-sel" data-rte="format" title="Text format">'+
+      '<option value="p">¶ Para</option>'+
+      '<option value="h1">H1</option>'+
+      '<option value="h2">H2</option>'+
+      '<option value="h3">H3</option>'+
+    '</select><span class="rte-sep"></span>' : '';
+  return '<div class="rte-toolbar" data-toolbar="'+blkId+'">' + fmtSel +
+    '<button class="rte-btn" data-cmd="bold" title="Bold"><b>B</b></button>'+
+    '<button class="rte-btn" data-cmd="italic" title="Italic"><i>I</i></button>'+
+    '<button class="rte-btn" data-cmd="underline" title="Underline"><u>U</u></button>'+
+    '<span class="rte-sep"></span>'+
+    '<button class="rte-btn" data-cmd="insertUnorderedList" title="Bullet list">••</button>'+
+    '<button class="rte-btn" data-cmd="insertOrderedList" title="Numbered list">1.</button>'+
+    '<button class="rte-btn" data-cmd="indent" title="Sub-bullet">⇥</button>'+
+    '<button class="rte-btn" data-cmd="outdent" title="Outdent">⇤</button>'+
+    '<span class="rte-sep"></span>'+
+    '<button class="rte-btn" data-rte="link" title="Insert URL link">🔗</button>'+
+    '<button class="rte-btn" data-rte="mail" title="Insert email link">✉</button>'+
+    '<button class="rte-btn" data-rte="topic" title="Link to topic">📄</button>'+
+    '<span class="rte-sep"></span>'+
+    '<button class="rte-btn" data-rte="img" title="Insert image">🖼️</button>'+
+    '<button class="rte-btn" data-rte="callout" title="Insert callout">💬</button>'+
+    '<button class="rte-btn" data-rte="code" title="Insert code block" style="font-family:Consolas,monospace;">&lt;/&gt;</button>'+
+    '<button class="rte-btn" data-rte="table" title="Insert table">⊞</button>'+
+  '</div>';
+}
+function rteEditableHtml(blkId, html){
+  return '<div class="rte-editable" contenteditable="true" data-rte-field="html" data-blk="'+blkId+'">'+html+'</div>';
+}
+
+/* ---- Inline topic picker ---- */
+var rteTopicPickerEl = null;
+function showTopicPicker(anchorEl, targetEl, onPick){
+  closeTopicPicker();
+  var picker = document.createElement('div');
+  picker.className = 'rte-topic-picker';
+  picker.id = 'rteTopicPickerEl';
+  var rect = anchorEl.getBoundingClientRect();
+  picker.style.top  = (rect.bottom + 4) + 'px';
+  picker.style.left = Math.min(rect.left, window.innerWidth - 270) + 'px';
+  var input = document.createElement('input');
+  input.placeholder = 'Search topics…';
+  picker.appendChild(input);
+  var list = document.createElement('div');
+  list.className = 'rte-topic-picker-list';
+  picker.appendChild(list);
+  function renderList(q){
+    var items = data.topics.filter(function(t){
+      return !q || t.title.toLowerCase().indexOf(q.toLowerCase()) > -1;
+    });
+    list.innerHTML = '';
+    items.forEach(function(t){
+      var sec = getSection(t.sectionId);
+      var prod = sec ? getProduct(sec.productId) : null;
+      var btn = document.createElement('button');
+      btn.className = 'rte-topic-picker-item';
+      btn.textContent = (prod ? prod.name + ' › ' : '') + t.title;
+      btn.addEventListener('mousedown', function(e){
+        e.preventDefault();
+        onPick(t);
+        closeTopicPicker();
+      });
+      list.appendChild(btn);
+    });
+  }
+  renderList('');
+  input.addEventListener('input', function(){ renderList(input.value); });
+  document.body.appendChild(picker);
+  rteTopicPickerEl = picker;
+  setTimeout(function(){ input.focus(); }, 0);
+}
+function closeTopicPicker(){
+  if (rteTopicPickerEl && rteTopicPickerEl.parentNode) rteTopicPickerEl.parentNode.removeChild(rteTopicPickerEl);
+  rteTopicPickerEl = null;
+}
+document.addEventListener('mousedown', function(e){
+  if (rteTopicPickerEl && !rteTopicPickerEl.contains(e.target)) closeTopicPicker();
+});
+
+/* ---- Inline callout type picker ---- */
+var rteCalloutPickerEl = null;
+function showCalloutPicker(anchorEl, targetEl){
+  if (rteCalloutPickerEl && rteCalloutPickerEl.parentNode) rteCalloutPickerEl.parentNode.removeChild(rteCalloutPickerEl);
+  var picker = document.createElement('div');
+  picker.className = 'rte-callout-picker';
+  var rect = anchorEl.getBoundingClientRect();
+  picker.style.top  = (rect.bottom + 4) + 'px';
+  picker.style.left = Math.min(rect.left, window.innerWidth - 190) + 'px';
+  var types = [
+    {k:'note',      label:'Note',      cls:'rte-callout-note',      icon:CALLOUT_ICONS.note},
+    {k:'tip',       label:'Tip',       cls:'rte-callout-tip',       icon:CALLOUT_ICONS.tip},
+    {k:'warning',   label:'Warning',   cls:'rte-callout-warning',   icon:CALLOUT_ICONS.warning},
+    {k:'caution',   label:'Caution',   cls:'rte-callout-caution',   icon:CALLOUT_ICONS.caution},
+    {k:'important', label:'Important', cls:'rte-callout-important', icon:CALLOUT_ICONS.important}
+  ];
+  types.forEach(function(item){
+    var btn = document.createElement('button');
+    btn.innerHTML = '<span style="display:inline-flex;align-items:center;gap:7px;"><span style="width:15px;height:15px;display:inline-flex;flex-shrink:0;">'+item.icon+'</span>'+item.label+'</span>';
+    btn.addEventListener('mousedown', function(e){
+      e.preventDefault();
+      /* Insert directly into the editable using execCommand */
+      rteActiveEl = targetEl;
+      targetEl.focus();
+      rteRestoreRange();
+      var iconHtml = '<span class="rte-callout-icon" contenteditable="false">'+item.icon+'</span>';
+      var titleHtml = '<span class="rte-callout-title">'+item.label+'</span>';
+      var innerHtml = '<div class="rte-callout-inner">'+titleHtml+'<span class="rte-callout-text"> Type your text here…</span></div>';
+      var fullHtml = '<div class="rte-callout '+item.cls+'">'+iconHtml+innerHtml+'</div><p><br></p>';
+      document.execCommand('insertHTML', false, fullHtml);
+      targetEl.dispatchEvent(new Event('input'));
+    });
+    picker.appendChild(btn);
+  });
+  document.body.appendChild(picker);
+  rteCalloutPickerEl = picker;
+  setTimeout(function(){ document.addEventListener('mousedown', function h(e){ if (!picker.contains(e.target)){ picker.parentNode && picker.parentNode.removeChild(picker); rteCalloutPickerEl=null; document.removeEventListener('mousedown',h); } }); }, 0);
+}
+
+/* ---- Hidden file input for image inserts ---- */
+var rteImgInputEl = (function(){
+  var inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*'; inp.style.display = 'none';
+  document.body.appendChild(inp);
+  return inp;
+})();
+
+function bindRteToolbar(card, b, isTextBlock){
+  var toolbar = card.querySelector('[data-toolbar]');
+  var editable = card.querySelector('[data-rte-field="html"]');
+  if (!toolbar || !editable) return;
+
+  /* Track focus */
+  editable.addEventListener('focus', function(){ rteActiveEl = editable; });
+  editable.addEventListener('mouseup', rteSaveRange);
+  editable.addEventListener('keyup', rteSaveRange);
+
+  /* Save content on input */
+  editable.addEventListener('input', function(){
+    b.html = editable.innerHTML;
+    b.text = undefined;
+    saveData();
+  });
+
+  /* Format selector (text blocks only) */
+  var fmtSel = toolbar.querySelector('[data-rte="format"]');
+  if (fmtSel){
+    /* Detect current format */
+    function detectFormat(){
+      var sel = window.getSelection();
+      if (!sel || !sel.rangeCount) return;
+      var el = sel.anchorNode;
+      while (el && el !== editable){
+        var tag = el.tagName ? el.tagName.toLowerCase() : '';
+        if (['h1','h2','h3','h4','h5','h6'].indexOf(tag) > -1){ fmtSel.value = tag; return; }
+        if (tag === 'p'){ fmtSel.value = 'p'; return; }
+        el = el.parentNode;
+      }
+    }
+    editable.addEventListener('keyup', detectFormat);
+    editable.addEventListener('mouseup', detectFormat);
+    fmtSel.addEventListener('mousedown', function(e){ e.stopPropagation(); });
+    fmtSel.addEventListener('change', function(){
+      editable.focus();
+      rteRestoreRange();
+      document.execCommand('formatBlock', false, fmtSel.value);
+      editable.dispatchEvent(new Event('input'));
+    });
+  }
+
+  /* execCommand buttons */
+  toolbar.querySelectorAll('[data-cmd]').forEach(function(btn){
+    btn.addEventListener('mousedown', function(e){
+      e.preventDefault();
+      rteActiveEl = editable;
+      rteRestoreRange();
+      document.execCommand(btn.getAttribute('data-cmd'), false, null);
+      editable.dispatchEvent(new Event('input'));
+    });
+  });
+
+  /* Action buttons */
+  toolbar.querySelectorAll('[data-rte]').forEach(function(btn){
+    var action = btn.getAttribute('data-rte');
+    if (action === 'format') return; /* handled above */
+    btn.addEventListener('mousedown', function(e){
+      e.preventDefault();
+      rteActiveEl = editable;
+      rteSaveRange();
+      if (action === 'link'){
+        /* open URL tab of modal */
+        openRteLinkTableModal('url', editable);
+      } else if (action === 'mail'){
+        openRteLinkTableModal('mail', editable);
+      } else if (action === 'topic'){
+        /* inline floating picker */
+        showTopicPicker(btn, editable, function(t){
+          editable.focus();
+          rteRestoreRange();
+          var html = '<a class="rte-int-link" href="#" data-internal-topic="'+escapeHtml(t.id)+'">📄 '+escapeHtml(t.title)+'</a>';
+          document.execCommand('insertHTML', false, html);
+          editable.dispatchEvent(new Event('input'));
+        });
+      } else if (action === 'table'){
+        openRteLinkTableModal('table', editable);
+      } else if (action === 'img'){
+        /* hidden file input */
+        rteImgInputEl.onchange = function(){
+          var file = rteImgInputEl.files[0]; rteImgInputEl.value = '';
+          if (!file) return;
+          compressImage(file, function(dataUrl){
+            if (!dataUrl) return;
+            editable.focus();
+            rteRestoreRange();
+            var html = '<img src="'+dataUrl+'" alt="" style="max-width:100%;border-radius:6px;margin:6px 0;display:block;"><p><br></p>';
+            document.execCommand('insertHTML', false, html);
+            editable.dispatchEvent(new Event('input'));
+          });
+        };
+        rteImgInputEl.click();
+      } else if (action === 'callout'){
+        showCalloutPicker(btn, editable);
+      } else if (action === 'code'){
+        rteInsertHtmlAtCursor('<pre contenteditable="true">// code here</pre><p><br></p>', editable);
+      }
+    });
+  });
+
+  /* Make internal links navigate in preview on click inside editable (prevent nav) */
+  editable.addEventListener('click', function(e){
+    var a = e.target.closest('a[data-internal-topic]');
+    if (a) e.preventDefault();
+  });
+
+  /* Tab / Shift-Tab: indent / outdent list items; prevent focus loss */
+  editable.addEventListener('keydown', function(e){
+    if (e.key !== 'Tab') return;
+    e.preventDefault();
+    var sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    /* Check if caret is inside a list item */
+    var node = sel.anchorNode;
+    var li = null;
+    while (node && node !== editable) {
+      if (node.nodeName === 'LI') { li = node; break; }
+      node = node.parentNode;
+    }
+    if (li) {
+      /* Use execCommand for indent/outdent — browser handles list nesting + numbering */
+      document.execCommand(e.shiftKey ? 'outdent' : 'indent', false, null);
+    } else {
+      /* Outside list: insert 4 non-breaking spaces as indent */
+      if (!e.shiftKey) document.execCommand('insertHTML', false, '\u00a0\u00a0\u00a0\u00a0');
+    }
+    editable.dispatchEvent(new Event('input'));
+  });
+}
+
+/* ---- Shared Link/Table modal ---- */
+var rteModalTargetEl = null;
+
+function openRteLinkTableModal(startTab, targetEl){
+  rteModalTargetEl = targetEl;
+  /* populate topic dropdown */
+  var topicSel = document.getElementById('rteLinkTopicSel');
+  topicSel.innerHTML = data.topics.map(function(t){
+    var sec = getSection(t.sectionId);
+    var prod = sec ? getProduct(sec.productId) : null;
+    return '<option value="'+escapeHtml(t.id)+'">'+escapeHtml((prod?prod.name+' › ':'')+t.title)+'</option>';
+  }).join('');
+  /* switch to correct tab */
+  document.querySelectorAll('#rteLinkTableTabs .rte-modal-tab').forEach(function(tab){
+    var active = tab.getAttribute('data-tab') === startTab;
+    tab.classList.toggle('is-active', active);
+    document.getElementById('rtePane-'+tab.getAttribute('data-tab')).classList.toggle('is-active', active);
+  });
+  /* clear fields */
+  ['rteLinkText-url','rteLinkUrl','rteLinkText-mail','rteLinkMail','rteLinkText-topic'].forEach(function(id){
+    var el = document.getElementById(id); if(el) el.value = '';
+  });
+  document.getElementById('rteLinkTableOverlay').classList.add('is-open');
+}
+function closeRteLinkTableModal(){
+  document.getElementById('rteLinkTableOverlay').classList.remove('is-open');
+  rteModalTargetEl = null;
+}
+
+function rteInsertHtmlAtCursor(html){
+  if (rteModalTargetEl) rteModalTargetEl.focus();
+  rteRestoreRange();
+  document.execCommand('insertHTML', false, html);
+  if (rteModalTargetEl){
+    rteModalTargetEl.dispatchEvent(new Event('input'));
+  }
+  closeRteLinkTableModal();
+}
+
+/* ---- Bind modal tabs + insert buttons once ---- */
+(function bindRteLinkTableModal(){
+  document.getElementById('rteLinkTableClose').addEventListener('click', closeRteLinkTableModal);
+  document.getElementById('rteLinkTableOverlay').addEventListener('click', function(e){ if(e.target===this) closeRteLinkTableModal(); });
+  document.querySelectorAll('#rteLinkTableTabs .rte-modal-tab').forEach(function(tab){
+    tab.addEventListener('click', function(){
+      document.querySelectorAll('#rteLinkTableTabs .rte-modal-tab').forEach(function(t){
+        t.classList.toggle('is-active', t===tab);
+        document.getElementById('rtePane-'+t.getAttribute('data-tab')).classList.toggle('is-active', t===tab);
+      });
+    });
+  });
+
+  /* URL insert */
+  document.getElementById('rteInsertUrl').addEventListener('click', function(){
+    var text = document.getElementById('rteLinkText-url').value.trim();
+    var url  = document.getElementById('rteLinkUrl').value.trim();
+    if (!url){ alert('Please enter a URL.'); return; }
+    var label = text || url;
+    var html = '<a class="rte-ext-link" href="'+escapeHtml(url)+'" target="_blank" rel="noopener">'+escapeHtml(label)+' ↗</a>';
+    rteInsertHtmlAtCursor(html);
+  });
+
+  /* Email insert */
+  document.getElementById('rteInsertMail').addEventListener('click', function(){
+    var text = document.getElementById('rteLinkText-mail').value.trim();
+    var mail = document.getElementById('rteLinkMail').value.trim();
+    if (!mail){ alert('Please enter an email address.'); return; }
+    var label = text || mail;
+    var html = '<a class="rte-mail-link" href="mailto:'+escapeHtml(mail)+'">✉ '+escapeHtml(label)+'</a>';
+    rteInsertHtmlAtCursor(html);
+  });
+
+  /* Internal topic link insert */
+  document.getElementById('rteInsertTopic').addEventListener('click', function(){
+    var topicId = document.getElementById('rteLinkTopicSel').value;
+    var text    = document.getElementById('rteLinkText-topic').value.trim();
+    var topic   = getTopic(topicId);
+    if (!topic){ alert('No topic selected.'); return; }
+    var label = text || topic.title;
+    /* In the published site there are no hash anchors per topic — we store
+       a data-topic attribute so the article can be opened by the reader. */
+    var html = '<a class="rte-int-link" href="#" data-internal-topic="'+escapeHtml(topicId)+'">📄 '+escapeHtml(label)+'</a>';
+    rteInsertHtmlAtCursor(html);
+  });
+
+  /* Table insert */
+  document.getElementById('rteInsertTable').addEventListener('click', function(){
+    var rows = Math.max(1, parseInt(document.getElementById('rteTableRows').value,10)||3);
+    var cols = Math.max(1, parseInt(document.getElementById('rteTableCols').value,10)||3);
+    var header = document.getElementById('rteTableHeader').checked;
+    var tableHtml = '<table>';
+    for (var r=0; r<rows; r++){
+      tableHtml += '<tr>';
+      for (var c=0; c<cols; c++){
+        if (r===0 && header){
+          tableHtml += '<th>Header '+(c+1)+'</th>';
+        } else {
+          tableHtml += '<td>Cell</td>';
+        }
+      }
+      tableHtml += '</tr>';
+    }
+    tableHtml += '</table><p></p>'; /* trailing <p> so caret lands after table */
+    rteInsertHtmlAtCursor(tableHtml);
+  });
+})();
+
 function renderEditor(main){
   var t = getTopic(state.articleId);
   if (!t){ main.innerHTML='<div class="empty-state">Topic not found.</div>'; return; }
-  if (!editSnapshot || editSnapshot.topicId !== t.id){
-    main.innerHTML = '<div class="empty-state">Loading topic…</div>';
-    ensureTopicLoaded(t.id).then(function(blocks){
-      if (state.mode!=='edit' || state.articleId!==t.id) return; /* navigated away while this was loading */
-      editSnapshot = { topicId: t.id, title: t.title, blocks: JSON.parse(JSON.stringify(blocks||[])) };
-      renderEditorForm(main, t);
-    });
+
+  /* ---- Topic lock check ---- */
+  if (isLockedByOther(t.id)){
+    main.innerHTML =
+      '<div class="topic-lock-banner">'+
+        '<span class="lock-icon">🔒</span>'+
+        '<span><strong>This topic is currently being edited in another tab or window.</strong> '+
+        'Close that tab or wait for the session to expire before editing here.</span>'+
+        '<button class="lock-dismiss" id="lockDismissBtn" title="Dismiss">✕</button>'+
+      '</div>'+
+      '<div class="article-body">'+(t.blocks||[]).map(blockToHtml).join('')+'</div>';
+    document.getElementById('lockDismissBtn').addEventListener('click', function(){ renderMain(); });
     return;
   }
-  renderEditorForm(main, t);
-}
 
-function renderEditorForm(main, t){
+  /* ---- Acquire lock ---- */
+  acquireLock(t.id);
+  startLockRefresh(t.id);
+
+  if (!editSnapshot || editSnapshot.topicId !== t.id){
+    editSnapshot = { topicId: t.id, title: t.title, blocks: JSON.parse(JSON.stringify(t.blocks||[])) };
+  }
+
+  function doSave(){
+    t.updated = today();
+    var prod = getProduct(getSection(t.sectionId).productId);
+    var details = editSnapshot ? describeTopicChanges(editSnapshot, t) : ['Updated "'+t.title+'".'];
+    logChange('updated', prod.name, '"'+t.title+'" updated', details);
+    editSnapshot = { topicId: t.id, title: t.title, blocks: JSON.parse(JSON.stringify(t.blocks||[])) };
+    saveData();
+    renderNavTree();
+    showToast('Saved');
+  }
+
   var html = '<div class="editor-toolbar">'+
       '<input class="topic-title" id="titleInput" value="'+escapeHtml(t.title)+'">'+
       '<button class="save-btn" id="saveTopicBtn">Save topic</button></div>'+
       '<div id="blockList"></div>'+
       '<div class="add-block-bar">'+
-        '<button data-add="heading">＋ Heading</button>'+
-        '<button data-add="paragraph">＋ Paragraph</button>'+
+        '<button data-add="text">＋ Text</button>'+
         '<button data-add="image">＋ Image</button>'+
         '<button data-add="callout">＋ Callout</button>'+
         '<button data-add="list">＋ List</button>'+
         '<button data-add="code">＋ Code</button>'+
-      '</div>';
+      '</div>'+
+      '<div class="save-btn-bottom"><button class="save-btn" id="saveTopicBtnBottom">Save topic</button></div>';
   main.innerHTML = html;
   renderBlockList();
 
   document.getElementById('titleInput').addEventListener('input', function(){ t.title = this.value; });
-  document.getElementById('saveTopicBtn').addEventListener('click', function(){
-    t.updated = today();
-    var prod = getProduct(getSection(t.sectionId).productId);
-    var afterSnapshot = { title: t.title, blocks: topicBlocks(t) };
-    var details = editSnapshot ? describeTopicChanges(editSnapshot, afterSnapshot) : ['Updated "'+t.title+'".'];
-    logChange('updated', prod.name, '"'+t.title+'" updated', details);
-    editSnapshot = { topicId: t.id, title: t.title, blocks: JSON.parse(JSON.stringify(topicBlocks(t))) };
-    saveMeta();
-    saveTopicContent(t.id);
-    renderNavTree();
-    showToast('Saved');
-  });
+  document.getElementById('saveTopicBtn').addEventListener('click', doSave);
+  document.getElementById('saveTopicBtnBottom').addEventListener('click', doSave);
   main.querySelectorAll('[data-add]').forEach(function(btn){
     btn.addEventListener('click', function(){ addBlock(t, btn.getAttribute('data-add')); });
   });
@@ -1448,34 +2055,38 @@ function renderEditorForm(main, t){
 
 function addBlock(t, type){
   var b = {id: uid('blk'), type: type};
-  if (type==='heading'){ b.level=2; b.html='New heading'; }
-  if (type==='paragraph'){ b.html='New paragraph text.'; }
+  /* 'text' is the new unified heading+paragraph block */
+  if (type==='text'){ b.html='<p>New text…</p>'; }
+  /* keep old types for backward compat */
+  if (type==='heading'){ b.type='text'; b.html='<h2>New heading</h2>'; }
+  if (type==='paragraph'){ b.type='text'; b.html='<p>New paragraph text.</p>'; }
   if (type==='image'){ b.src=''; b.alt=''; b.caption=''; }
-  if (type==='callout'){ b.calloutType='note'; b.html='Callout text.'; }
+  if (type==='callout'){ b.calloutType='note'; b.html='<p>Callout text.</p>'; }
   if (type==='list'){ b.ordered=false; b.items=['First item','Second item']; }
-  if (type==='code'){ b.text='// code'; }
-  topicBlocks(t).push(b);
-  saveTopicContent(t.id);
+  if (type==='code'){ b.text='// code here'; }
+  t.blocks = t.blocks || [];
+  t.blocks.push(b);
+  saveData();
   renderBlockList();
 }
 
 function renderBlockList(){
   var t = getTopic(state.articleId);
   var wrap = document.getElementById('blockList');
-  var blocks = topicBlocks(t);
-  wrap.innerHTML = blocks.map(blockCardHtml).join('');
-  blocks.forEach(function(b){ bindBlockCard(t, b); });
+  wrap.innerHTML = (t.blocks||[]).map(blockCardHtml).join('');
+  (t.blocks||[]).forEach(function(b){ bindBlockCard(t, b); });
 }
 
 function blockCardHtml(b){
-  var label = ({heading:'Heading', paragraph:'Paragraph', image:'Image', callout:'Callout', list:'List', code:'Code'})[b.type] || b.type;
+  /* 'text' = unified heading/paragraph block; 'heading'/'paragraph' are legacy aliases */
+  var isText = (b.type==='text' || b.type==='heading' || b.type==='paragraph');
+  var label = ({text:'Text', heading:'Text', paragraph:'Text', image:'Image', callout:'Callout', list:'List', code:'Code'})[b.type] || b.type;
   var body = '';
-  if (b.type==='heading'){
-    body = '<select class="block-select" data-field="level">'+[1,2,3].map(function(l){return '<option value="'+l+'"'+(b.level==l?' selected':'')+'>H'+l+'</option>';}).join('')+'</select>'+
-           '<div contenteditable="true" data-field="html" style="margin-top:8px;font-weight:700;font-size:1.1rem;">'+ (b.html||'') +'</div>';
-  } else if (b.type==='paragraph'){
-    body = '<div class="mini-toolbar"><button type="button" data-cmd="bold"><b>B</b></button><button type="button" data-cmd="italic"><i>I</i></button></div>'+
-           '<div contenteditable="true" data-field="html">'+ (b.html||'') +'</div>';
+  if (isText){
+    /* Migrate legacy heading/paragraph to rich html */
+    var richHtml = b.html != null ? b.html
+      : (b.type==='heading' ? '<h'+(b.level||2)+'>'+escapeHtml(b.text||'')+'</h'+(b.level||2)+'>' : '<p>'+escapeHtml(b.text||'')+'</p>');
+    body = rteToolbarHtml(b.id, true) + rteEditableHtml(b.id, richHtml);
   } else if (b.type==='image'){
     body = '<input type="file" accept="image/*" data-field="upload">'+
            '<input class="block-input" type="text" placeholder="…or paste an image URL" data-field="src" value="'+escapeHtml(b.src||'')+'">'+
@@ -1483,105 +2094,77 @@ function blockCardHtml(b){
            '<input class="block-input" type="text" placeholder="Caption" data-field="caption" value="'+escapeHtml(b.caption||'')+'">'+
            (b.src ? '<img class="img-preview" src="'+b.src+'">' : '');
   } else if (b.type==='callout'){
+    var calloutRichHtml = b.html != null ? b.html : '<p>'+escapeHtml(b.text||'')+'</p>';
     body = '<select class="block-select" data-field="calloutType">'+Object.keys(CALLOUT_LABELS).map(function(k){return '<option value="'+k+'"'+(b.calloutType===k?' selected':'')+'>'+CALLOUT_LABELS[k]+'</option>';}).join('')+'</select>'+
-           '<div contenteditable="true" data-field="html" style="margin-top:8px;">'+ (b.html||'') +'</div>';
+           '<div style="margin-top:8px;">'+rteToolbarHtml(b.id, false)+rteEditableHtml(b.id, calloutRichHtml)+'</div>';
   } else if (b.type==='list'){
     body = '<select class="block-select" data-field="ordered"><option value="0"'+(!b.ordered?' selected':'')+'>Bullet list</option><option value="1"'+(b.ordered?' selected':'')+'>Numbered list</option></select>'+
            '<textarea class="block-input" data-field="items" placeholder="One item per line">'+ escapeHtml((b.items||[]).join('\n')) +'</textarea>';
   } else if (b.type==='code'){
-    body = '<textarea class="block-input" data-field="text" style="font-family:var(--font-mono);">'+ escapeHtml(b.text||'') +'</textarea>';
+    body = '<div style="position:relative;">'+
+      '<pre class="block-input" contenteditable="true" data-field="code-html" style="font-family:Consolas,\'Courier New\',monospace;background:#1E1E2E;color:#CDD6F4;border-radius:6px;padding:12px 14px;min-height:60px;font-size:.85rem;line-height:1.5;overflow-x:auto;white-space:pre;border:1px solid var(--paper-line);">'+escapeHtml(b.text||'')+'</pre>'+
+    '</div>';
   }
   return '<div class="block-card" data-block="'+b.id+'"><div class="block-head"><span>'+label+'</span>'+
     '<div class="block-actions"><button data-act="up" title="Move up">↑</button><button data-act="down" title="Move down">↓</button><button data-act="del" title="Delete">✕</button></div>'+
     '</div><div class="block-body">'+ body +'</div></div>';
 }
 
-/* Downscales + re-encodes an uploaded image on a canvas so large photos
-   don't bloat the topic's JSON file. Keeps PNG (for transparency) only
-   when the source actually has transparent pixels; everything else is
-   re-encoded as high-quality JPEG. Falls back to the untouched file if
-   anything goes wrong or compression didn't actually help. */
-function hasTransparency(ctx, w, h){
-  try{
-    var data = ctx.getImageData(0, 0, w, h).data;
-    for (var i=3;i<data.length;i+=4){ if (data[i] < 255) return true; }
-  }catch(e){ return false; }
-  return false;
-}
-function compressImageFile(file, maxDim, quality){
-  maxDim = maxDim || 1600; quality = quality || 0.85;
-  return new Promise(function(resolve, reject){
-    var reader = new FileReader();
-    reader.onerror = function(){ reject(new Error('Could not read file')); };
-    reader.onload = function(){
-      var original = reader.result;
-      var img = new Image();
-      img.onerror = function(){ resolve(original); };
-      img.onload = function(){
-        try{
-          var scale = Math.min(1, maxDim / Math.max(img.width, img.height));
-          var cw = Math.max(1, Math.round(img.width * scale));
-          var ch = Math.max(1, Math.round(img.height * scale));
-          var canvas = document.createElement('canvas');
-          canvas.width = cw; canvas.height = ch;
-          var ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, cw, ch);
-          var mime = /png|gif/i.test(file.type) && hasTransparency(ctx, cw, ch) ? 'image/png' : 'image/jpeg';
-          var out = canvas.toDataURL(mime, quality);
-          resolve(out && out.length < original.length ? out : original);
-        }catch(e){ resolve(original); }
-      };
-      img.src = original;
-    };
-    reader.readAsDataURL(file);
-  });
-}
 function bindBlockCard(t, b){
   var card = document.querySelector('[data-block="'+b.id+'"]');
   if (!card) return;
+
+  var isText = (b.type==='text' || b.type==='heading' || b.type==='paragraph');
+
+  /* Bind RTE toolbar for text / callout blocks */
+  if (isText || b.type === 'callout'){
+    /* Normalize to text type */
+    if (isText) b.type = 'text';
+    bindRteToolbar(card, b, isText);
+  }
+
+  /* Code block: contenteditable pre */
+  var codePre = card.querySelector('[data-field="code-html"]');
+  if (codePre){
+    codePre.addEventListener('input', function(){
+      b.text = codePre.innerText;
+      saveData();
+    });
+  }
+
   card.querySelectorAll('[data-field]').forEach(function(el){
     var field = el.getAttribute('data-field');
+    if (field === 'code-html') return; /* handled above */
     var evt = (el.tagName==='SELECT' || el.type==='file') ? 'change' : 'input';
     el.addEventListener(evt, function(){
       if (field==='upload'){
         var file = el.files[0];
         if (!file) return;
-        showToast('Compressing image…');
-        compressImageFile(file).then(function(dataUrl){
-          b.src = dataUrl; saveTopicContent(t.id); renderBlockList();
-          showToast('Image added');
-        }).catch(function(){
-          var reader = new FileReader();
-          reader.onload = function(){ b.src = reader.result; saveTopicContent(t.id); renderBlockList(); };
-          reader.readAsDataURL(file);
+        compressImage(file, function(dataUrl){
+          if (!dataUrl) return;
+          b.src = dataUrl; b.html = undefined; saveData(); renderBlockList();
         });
         return;
       }
-      if (field==='html'){ b.html = el.innerHTML; }
+      if (field==='text'){ b.text = el.value; b.html = undefined; }
       else if (field==='level'){ b.level = parseInt(el.value,10); }
       else if (field==='ordered'){ b.ordered = el.value==='1'; }
       else if (field==='items'){ b.items = el.value.split('\n').map(function(s){return s.trim();}).filter(Boolean); }
       else { b[field] = el.value; }
-      saveTopicContent(t.id);
+      saveData();
     });
   });
-  card.querySelectorAll('.mini-toolbar button').forEach(function(btn){
-    btn.addEventListener('click', function(){ document.execCommand(btn.getAttribute('data-cmd')); });
-  });
   card.querySelector('[data-act="del"]').addEventListener('click', function(){
-    var blocks = topicBlocks(t).filter(function(x){return x.id!==b.id;});
-    topicContent[t.id].blocks = blocks;
-    saveTopicContent(t.id); renderBlockList();
+    t.blocks = t.blocks.filter(function(x){return x.id!==b.id;});
+    saveData(); renderBlockList();
   });
   card.querySelector('[data-act="up"]').addEventListener('click', function(){
-    var blocks = topicBlocks(t);
-    var i = blocks.findIndex(function(x){return x.id===b.id;});
-    if (i>0){ var tmp=blocks[i-1]; blocks[i-1]=blocks[i]; blocks[i]=tmp; saveTopicContent(t.id); renderBlockList(); }
+    var i = t.blocks.findIndex(function(x){return x.id===b.id;});
+    if (i>0){ var tmp=t.blocks[i-1]; t.blocks[i-1]=t.blocks[i]; t.blocks[i]=tmp; saveData(); renderBlockList(); }
   });
   card.querySelector('[data-act="down"]').addEventListener('click', function(){
-    var blocks = topicBlocks(t);
-    var i = blocks.findIndex(function(x){return x.id===b.id;});
-    if (i<blocks.length-1){ var tmp=blocks[i+1]; blocks[i+1]=blocks[i]; blocks[i]=tmp; saveTopicContent(t.id); renderBlockList(); }
+    var i = t.blocks.findIndex(function(x){return x.id===b.id;});
+    if (i<t.blocks.length-1){ var tmp=t.blocks[i+1]; t.blocks[i+1]=t.blocks[i]; t.blocks[i]=tmp; saveData(); renderBlockList(); }
   });
 }
 
@@ -1625,6 +2208,8 @@ function bindSearch(){
    MODE TOGGLE + HISTORY LINK
    ============================================================ */
 function setMode(mode){
+  /* Release lock when leaving edit mode */
+  if (state.mode === 'edit' && mode !== 'edit') releaseCurrentLock();
   state.mode = mode;
   document.getElementById('btnPreview').classList.toggle('active', mode==='preview');
   document.getElementById('btnEdit').classList.toggle('active', mode==='edit');
@@ -1783,7 +2368,7 @@ document.getElementById('historyLink').addEventListener('click', function(e){
 function buildSupportTicketsSite(){
   var ghConfig = JSON.stringify({ settings: GITHUB_SETTINGS }).replace(/</g,'\\u003c');
   var css = document.querySelector('style').innerHTML
-    .replace(/\.editor-toolbar[\s\S]*?@media \(max-width:1180px\)/, '@media (max-width:1180px)');
+    .replace(/\/\* ---- EDITOR-ONLY styles start here[\s\S]*?EDITOR-ONLY styles end here ---- \*\//g, '');
   return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">' +
     '<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Support Tickets</title>' +
     '<style>' + css + '\n' +
@@ -2018,16 +2603,28 @@ document.getElementById('ghSettingsSaveBtn').addEventListener('click', function(
    ============================================================ */
 function buildStaticSite(){
   var shellCss = document.querySelector('style').innerHTML
-    .replace(/\.editor-toolbar[\s\S]*?@media \(max-width:1180px\)/, '@media (max-width:1180px)'); // strip editor-only CSS block
-  var json = JSON.stringify(data).replace(/</g,'\\u003c');
+    .replace(/\/\* ---- EDITOR-ONLY styles start here[\s\S]*?EDITOR-ONLY styles end here ---- \*\//, ''); // strip editor-only CSS block
+  /* Metadata only — no blocks. The exported site fetches each topic's own
+     content file (product-section-topic.json) the moment that topic is
+     opened, exactly like the live editor does, so the published page loads
+     fast even with a huge knowledge base. */
+  var slimData = {
+    products: data.products,
+    sections: data.sections,
+    topics: data.topics.map(function(t){ return {id:t.id, sectionId:t.sectionId, title:t.title, order:t.order, updated:t.updated, file:t.file}; }),
+    changelog: data.changelog
+  };
+  var json = JSON.stringify(slimData).replace(/</g,'\\u003c');
   /* Baked-in so any visitor's browser (which has no localStorage entry for
-     these) can still file a support ticket that gets written to the repo. */
+     these) can still file a support ticket that gets written to the repo,
+     and so the runtime can fetch topic content files by path. */
   var ghConfig = JSON.stringify({ settings: GITHUB_SETTINGS
 }).replace(/</g,'\\u003c');
 
   return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">' +
     '<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Knowledge Base</title>' +
-    '<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"><\/script>' +
+    '<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>' +
+    '<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>' +
     '<style>' + shellCss + '\n.mode-toggle,.export-btn,#addProductBtn,.add-btn,.row-actions .icon-sm,.revert-btn{display:none !important;}</style></head><body>' +
     '<div class="kb-shell" id="kbShell">' +
       '<header class="topbar"><button class="hamburger-btn" id="hamburgerBtn" aria-label="Open menu">☰</button>' +
@@ -2054,9 +2651,9 @@ function buildStaticSite(){
       '<main class="main" id="mainArea"></main>' +
       '<div class="sidebar-backdrop" id="sidebarBackdrop"></div>' +
       '<div class="rightbar-backdrop" id="rightbarBackdrop"></div>' +
-      '<div class="img-lightbox" id="imgLightbox"><img src="" alt=""><span class="img-lightbox-hint">Release to close</span></div>' +
       '<footer class="site-footer">&copy; 2026 Axtroid. All rights reserved.</footer>' +
       '</div>' +
+      '<div class="img-lightbox-overlay" id="imgLightbox"><img id="imgLightboxImg" alt=""></div>' +
       buildTicketModalMarkup() +
     '<script>window.__KB_DATA__=' + json + ';window.__KB_READONLY__=true;window.__GH_CONFIG__=' + ghConfig + ';' + exportRuntimeJs() + '</' + 'script>' +
     '</body></html>';
@@ -2089,48 +2686,14 @@ function buildTicketModalMarkup(){
 function exportRuntimeJs(){
   return '(' + function(){
     var data = window.__KB_DATA__;
-    var GH = window.__GH_CONFIG__ || {settings:{}};
     var openTicketModal; /* assigned below, called from the topic feedback widget */
     var favourites = [];
     try{ favourites = JSON.parse(localStorage.getItem('kb_favs')||'[]'); }catch(e){}
     function saveFavs(){ try{ localStorage.setItem('kb_favs', JSON.stringify(favourites)); }catch(e){} }
-    /* ---------- lazy per-topic content loading ----------
-       data.topics only carries metadata (title/order/file) — each
-       topic's actual blocks live in their own JSON file, published
-       alongside index.html. Public repos need no auth to read, so this
-       fetches straight from raw.githubusercontent.com (falls back to a
-       localStorage mirror when offline or before anything's published). */
-    var topicContentCache = {};
-    function topicLocalKey(id){ return 'kb_topic_content_' + id; }
-    function siblingPath(filename){ return (GH.settings.path||'').replace(/[^/]+$/,'') + filename; }
-    function rawUrl(path){ return 'https://raw.githubusercontent.com/'+GH.settings.owner+'/'+GH.settings.repo+'/'+GH.settings.branch+'/'+path; }
-    function ensureTopicLoaded(topicId){
-      if (topicContentCache[topicId]) return Promise.resolve(topicContentCache[topicId]);
-      var t = getTopic(topicId);
-      var fromLocal = function(){
-        var blocks = [];
-        try{ blocks = JSON.parse(localStorage.getItem(topicLocalKey(topicId))||'[]'); }catch(e){}
-        return blocks;
-      };
-      var configured = GH.settings.owner && GH.settings.repo && GH.settings.branch && t && t.file;
-      var loadPromise = configured
-        ? fetch(rawUrl(siblingPath(t.file)), {cache:'no-store'}).then(function(res){
-            if (!res.ok) throw new Error('content not published ('+res.status+')');
-            return res.json();
-          }).then(function(parsed){ return parsed.blocks || []; }).catch(function(e){
-            console.warn('Could not load topic content for "'+(t?t.title:topicId)+'":', e.message);
-            return fromLocal();
-          })
-        : Promise.resolve(fromLocal());
-      return loadPromise.then(function(blocks){
-        topicContentCache[topicId] = blocks;
-        try{ localStorage.setItem(topicLocalKey(topicId), JSON.stringify(blocks)); }catch(e){}
-        return blocks;
-      });
-    }
     var CALLOUT_LABELS={note:'Note',tip:'Tip',important:'Important',warning:'Warning',caution:'Caution'};
     var CALLOUT_ICONS={note:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01"/><path d="M11 11h1v5h1"/></svg>',tip:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6"/><path d="M12 2a6 6 0 00-3.5 10.9c.6.5 1 1.3 1 2.1h5c0-.8.4-1.6 1-2.1A6 6 0 0012 2z"/></svg>',important:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3v18"/><path d="M5 4h11l-2 4 2 4H5"/></svg>',warning:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l10 18H2z"/><path d="M12 10v4"/><path d="M12 17h.01"/></svg>',caution:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2h8l6 6v8l-6 6H8l-6-6V8z"/><path d="M12 8v5"/><path d="M12 16h.01"/></svg>'};
     function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+    function textToHtml(s){ return esc(String(s||'')).replace(/\n/g,'<br>'); }
     function getProduct(id){return data.products.find(function(p){return p.id===id;});}
     function getSection(id){return data.sections.find(function(s){return s.id===id;});}
     function getTopic(id){return data.topics.find(function(t){return t.id===id;});}
@@ -2138,42 +2701,93 @@ function exportRuntimeJs(){
     function topicsFor(sid){return data.topics.filter(function(t){return t.sectionId===sid;}).sort(function(a,b){return a.order-b.order;});}
     function calloutHtml(type,html){return '<div class="callout callout-'+type+'"><span class="callout-icon">'+CALLOUT_ICONS[type]+'</span><div class="callout-body"><div class="callout-title">'+CALLOUT_LABELS[type]+'</div>'+html+'</div></div>';}
     function blockToHtml(b){
-      if (b.type==='heading'){var l=b.level||2;return '<h'+l+' id="blk-'+b.id+'">'+(b.html||'')+'</h'+l+'>';}
-      if (b.type==='paragraph'){return '<p>'+(b.html||'')+'</p>';}
-      if (b.type==='image'){return '<figure><img src="'+(b.src||'')+'" alt="'+esc(b.alt||'')+'">'+(b.caption?'<figcaption>'+esc(b.caption)+'</figcaption>':'')+'</figure>';}
-      if (b.type==='callout'){return calloutHtml(b.calloutType||'note','<p>'+(b.html||'')+'</p>');}
+      /* 'text' = unified block (heading + paragraph combined) — the primary block type */
+      if (b.type==='text'){return '<div id="blk-'+b.id+'" class="rte-content">'+(b.html!=null?b.html:textToHtml(b.text!=null?b.text:''))+'</div>';}
+      /* Legacy aliases */
+      if (b.type==='heading'){var l=b.level||2;return b.html!=null?'<div id="blk-'+b.id+'">'+(b.html)+'</div>':'<h'+l+' id="blk-'+b.id+'">'+textToHtml(b.text!=null?b.text:'')+'</h'+l+'>';}
+      if (b.type==='paragraph'){return '<div id="blk-'+b.id+'">'+(b.html!=null?b.html:textToHtml(b.text!=null?b.text:''))+'</div>';}
+      if (b.type==='image'){return '<figure><img src="'+(b.src||'')+'" alt="'+esc(b.alt||'')+'" data-lightbox="1">'+(b.caption?'<figcaption>'+esc(b.caption)+'</figcaption>':'')+' </figure>';}
+      if (b.type==='callout'){return calloutHtml(b.calloutType||'note', b.html!=null?b.html:'<p>'+textToHtml(b.text!=null?b.text:'')+'</p>');}
       if (b.type==='list'){var tag=b.ordered?'ol':'ul';return '<'+tag+'>'+(b.items||[]).map(function(i){return '<li>'+esc(i)+'</li>';}).join('')+'</'+tag+'>';}
-      if (b.type==='code'){return '<pre><code>'+esc(b.text||'')+'</code></pre>';}
+      if (b.type==='code'){return '<pre><code style="font-family:Consolas,\'Courier New\',monospace;">'+esc(b.text||'')+'</code></pre>';}
       return '';
     }
-    var PRINT_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>';
-    function downloadTopicPdf(topicTitle){
-      var articleEl = document.querySelector('.article-body');
-      if (!articleEl) return;
-      if (typeof html2pdf === 'undefined'){ window.print(); return; }
-      var wrapper = document.createElement('div');
-      wrapper.style.padding = '18px 6px';
-      wrapper.style.fontFamily = getComputedStyle(document.body).fontFamily;
-      var h1 = document.createElement('h1');
-      h1.textContent = topicTitle || document.title;
-      h1.style.cssText = 'font-size:22px;margin:0 0 14px;';
-      wrapper.appendChild(h1);
-      var clone = articleEl.cloneNode(true);
-      clone.querySelectorAll('img').forEach(function(img){ img.style.cursor = 'default'; });
-      wrapper.appendChild(clone);
-      var filename = (topicTitle||'topic').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') + '.pdf';
-      html2pdf().set({
-        margin: 12,
-        filename: filename,
-        image: { type:'jpeg', quality:0.95 },
-        html2canvas: { scale:2, useCORS:true, backgroundColor:'#ffffff' },
-        jsPDF: { unit:'mm', format:'a4', orientation:'portrait' },
-        pagebreak: { mode:['avoid-all','css','legacy'] }
-      }).from(wrapper).save().catch(function(e){ console.error(e); });
+    /* Lazy per-topic content fetch — mirrors the live editor: data.json
+       (window.__KB_DATA__) is metadata only, so each topic's own
+       product-section-topic.json is pulled the moment it's opened. */
+    var GHR = window.__GH_CONFIG__ || {settings:{}};
+    function ghrUrl(path){ return 'https://api.github.com/repos/'+GHR.settings.owner+'/'+GHR.settings.repo+'/contents/'+path+'?ref='+GHR.settings.branch; }
+    function ghrSibling(filename){ return (GHR.settings.path||'').replace(/[^/]+$/,'') + filename; }
+    function ensureTopicContent(t, cb){
+      if (!t || t._loaded){ cb(); return; }
+      if (!t.file || !GHR.settings.owner){ t.blocks = t.blocks || []; t._loaded = true; cb(); return; }
+      /* Use standard GitHub Contents API (returns JSON with base64-encoded content)
+         so the response shape matches what ghPutFile publishes. */
+      fetch(ghrUrl(ghrSibling(t.file)), {headers:{Accept:'application/vnd.github+json'}}).then(function(r){
+        if (r.status===404){ throw new Error('topic file not found'); }
+        if (!r.ok) throw new Error('load failed ('+r.status+')');
+        return r.json();
+      }).then(function(file){
+        if (!file || !file.content) throw new Error('empty response');
+        var parsed = JSON.parse(decodeURIComponent(escape(atob(file.content.replace(/\n/g,'')))));
+        t.blocks = parsed.blocks || [];
+        t._loaded = true;
+        cb();
+      }).catch(function(e){
+        console.warn('Could not load content for topic "'+t.title+'":', e.message);
+        t.blocks = t.blocks || [];
+        t._loaded = true;
+        cb();
+      });
     }
+    /* ---------- image lightbox: press and hold to peek full-size ---------- */
+    (function(){
+      var overlay, imgEl, holdTimer, holding=false;
+      function open(src, alt){
+        overlay=document.getElementById('imgLightbox'); imgEl=document.getElementById('imgLightboxImg');
+        if (!overlay || !imgEl) return;
+        imgEl.src=src; imgEl.alt=alt||''; overlay.classList.add('is-open'); holding=true;
+      }
+      function close(){ if(overlay) overlay.classList.remove('is-open'); holding=false; }
+      document.addEventListener('pointerdown', function(e){
+        var img=e.target.closest && e.target.closest('.article-body img, .query-editable img');
+        if (!img) return;
+        clearTimeout(holdTimer);
+        holdTimer=setTimeout(function(){ open(img.src, img.alt); }, 320);
+      });
+      document.addEventListener('pointerup', function(){ clearTimeout(holdTimer); if(holding) close(); });
+      document.addEventListener('pointercancel', function(){ clearTimeout(holdTimer); if(holding) close(); });
+      document.addEventListener('contextmenu', function(e){ if(holding) e.preventDefault(); });
+    })();
+    /* ---------- direct PDF download (html2canvas + jsPDF) ---------- */
+    function downloadTopicPdf(topicTitle){
+      var bodyEl=document.querySelector('.article-body');
+      if (!bodyEl || !window.html2canvas || !window.jspdf){ window.print(); return; }
+      var wrap=document.createElement('div');
+      wrap.style.cssText='position:fixed;left:-9999px;top:0;background:#fff;width:760px;padding:40px;color:#201F23;';
+      wrap.innerHTML='<h1 style="font-size:26px;font-weight:700;margin:0 0 20px;">'+esc(topicTitle||'')+'</h1>'+bodyEl.innerHTML;
+      document.body.appendChild(wrap);
+      window.html2canvas(wrap,{scale:3,useCORS:true,backgroundColor:'#ffffff'}).then(function(canvas){
+        document.body.removeChild(wrap);
+        var imgData=canvas.toDataURL('image/jpeg',0.98);
+        var jsPDF=window.jspdf.jsPDF;
+        var pdf=new jsPDF({unit:'pt',format:'a4'});
+        var pageW=pdf.internal.pageSize.getWidth(), pageH=pdf.internal.pageSize.getHeight();
+        var imgW=pageW, imgH=canvas.height*imgW/canvas.width;
+        var heightLeft=imgH, y=0;
+        pdf.addImage(imgData,'JPEG',0,y,imgW,imgH,'','FAST');
+        heightLeft-=pageH;
+        while (heightLeft>0){ y=heightLeft-imgH; pdf.addPage(); pdf.addImage(imgData,'JPEG',0,y,imgW,imgH,'','FAST'); heightLeft-=pageH; }
+        pdf.save(((topicTitle||'document').toLowerCase().replace(/[^a-z0-9]+/g,'-')||'document')+'.pdf');
+      }).catch(function(e){
+        console.error('PDF generation failed', e);
+        if (document.body.contains(wrap)) document.body.removeChild(wrap);
+        alert('PDF generation failed.');
+      });
+    }
+    var PRINT_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>';
     function printMenuHtml(){
       return '<div class="print-menu" id="printMenu">'+
-
         '<button type="button" class="print-btn" id="printBtn" title="Print or save as PDF" aria-haspopup="true">'+PRINT_ICON_SVG+'</button>'+
         '<div class="print-dropdown" id="printDropdown">'+
           '<button type="button" data-print-action="pdf">⬇ Save as PDF</button>'+
@@ -2187,8 +2801,7 @@ function exportRuntimeJs(){
       menu.querySelectorAll('[data-print-action]').forEach(function(b){
         b.addEventListener('click', function(){
           menu.classList.remove('is-open');
-          var action = b.getAttribute('data-print-action');
-          if (action==='pdf'){ downloadTopicPdf(topicTitle); return; }
+          if (b.getAttribute('data-print-action')==='pdf'){ downloadTopicPdf(topicTitle); return; }
           var prevTitle=document.title;
           document.title = topicTitle || prevTitle;
           var restored=false;
@@ -2199,30 +2812,6 @@ function exportRuntimeJs(){
         });
       });
     }
-    function bindImageLightbox(){
-      var overlay = document.getElementById('imgLightbox');
-      if (!overlay || overlay._bound) return;
-      overlay._bound = true;
-      var img = overlay.querySelector('img');
-      function open(src, alt){ img.src=src; img.alt=alt||''; overlay.classList.add('is-open'); }
-      function close(){ overlay.classList.remove('is-open'); img.src=''; }
-      document.addEventListener('mousedown', function(e){
-        var target = e.target.closest('.article-body img, .img-preview');
-        if (!target) return;
-        e.preventDefault();
-        open(target.src, target.alt);
-      });
-      document.addEventListener('mouseup', close);
-      document.addEventListener('mouseleave', close);
-      document.addEventListener('touchstart', function(e){
-        var target = e.target.closest('.article-body img, .img-preview');
-        if (!target) return;
-        open(target.src, target.alt);
-      }, {passive:true});
-      document.addEventListener('touchend', close);
-      document.addEventListener('touchcancel', close);
-    }
-    bindImageLightbox();
     document.addEventListener('click', function(e){
       var pm=document.getElementById('printMenu');
       if (pm && pm.classList.contains('is-open') && !pm.contains(e.target)) pm.classList.remove('is-open');
@@ -2275,6 +2864,12 @@ function exportRuntimeJs(){
       articleId=id;
       document.querySelectorAll('.nav-row.is-active').forEach(function(r){r.classList.remove('is-active');});
       var row=document.querySelector('[data-select-topic="'+id+'"]'); if(row){row.classList.add('is-active');var p=row.closest('ul').closest('.nav-node');if(p)p.classList.add('is-open');}
+      var t=getTopic(id);
+      if (t && !t._loaded){
+        document.getElementById('mainArea').innerHTML='<div class="empty-state">Loading…</div>';
+        ensureTopicContent(t, function(){ if(articleId===id) renderMain(); });
+        return;
+      }
       renderMain();
     }
     function renderMain(){
@@ -2358,15 +2953,15 @@ function exportRuntimeJs(){
       var section=document.getElementById('topicSummarySection');
       if(section) section.style.display='none';
     }
-    function renderTopicSummary(t, blocks){
+    function renderTopicSummary(t){
       var section=document.getElementById('topicSummarySection'), list=document.getElementById('topicSummaryList');
       if(!section||!list) return;
-      var headings=(blocks||[]).filter(function(b){return b.type==='heading';});
+      var headings=(t.blocks||[]).filter(function(b){return b.type==='heading';});
       if(!headings.length){section.style.display='none';list.innerHTML='';return;}
       section.style.display='block';
       list.innerHTML=headings.map(function(b){
         var lvl=b.level||2;
-        var text=(b.html||'').replace(/<[^>]+>/g,'').trim()||'Untitled section';
+        var text=(b.text!=null?b.text:(b.html||'').replace(/<[^>]+>/g,'')).trim()||'Untitled section';
         return '<li'+(lvl>=3?' style="padding-left:16px;"':'')+'><a href="#blk-'+b.id+'" data-jump="'+b.id+'">'+esc(text)+'</a></li>';
       }).join('');
       list.querySelectorAll('[data-jump]').forEach(function(el){
@@ -2385,10 +2980,10 @@ function exportRuntimeJs(){
         '<div class="article-kicker">'+esc(prod.name)+' — '+esc(sec.title)+'</div>'+
         '<h1 class="article-title">'+esc(t.title)+'</h1>'+
         '<div class="article-meta"><span>Last updated '+esc(t.updated||'')+'</span>'+
-        '<button class="fav-toggle'+(isFav?' is-fav':'')+'" id="favToggleBtn">★ '+(isFav?'Saved to favourites':'Add to favourites')+'</button>'+
+        '<button class="fav-toggle'+(isFav?' is-fav':'')+'" id="favToggleBtn">★ '+(isFav?'Saved to favourites':'Favourite')+'</button>'+
         printMenuHtml()+
         '</div>'+
-        '<div class="article-body" id="articleBody"><p style="color:var(--text-muted);">Loading…</p></div>'+
+        '<div class="article-body">'+(t.blocks||[]).map(blockToHtml).join('')+'</div>'+
         '<div class="topic-feedback" id="topicFeedback">'+
           '<span class="topic-feedback-question">Did you find the information useful?</span>'+
           '<span class="topic-feedback-buttons">'+
@@ -2399,13 +2994,7 @@ function exportRuntimeJs(){
       document.getElementById('favToggleBtn').addEventListener('click',function(){toggleFav(t.id);renderArticle(main);});
       bindPrintMenu(t.title);
       bindTopicFeedback();
-      hideTopicSummary();
-      ensureTopicLoaded(t.id).then(function(blocks){
-        if (articleId !== t.id) return;
-        var body = document.getElementById('articleBody');
-        if (body) body.innerHTML = blocks.map(blockToHtml).join('');
-        renderTopicSummary(t, blocks);
-      });
+      renderTopicSummary(t);
     }
     function bindTopicFeedback(){
       var box=document.getElementById('topicFeedback');
@@ -2600,35 +3189,13 @@ function siblingPath(filename){
   return base + filename;
 }
 async function ghGetFile(path){
-  var res;
-  try{
-    res = await fetch(ghUrl(path), { headers: ghHeaders(false), cache:'no-store' });
-  }catch(e){
-    throw new Error('Network error reaching GitHub while reading "'+path+'": '+e.message);
-  }
+  var res = await fetch(ghUrl(path), { headers: ghHeaders(false) });
   if (res.status === 404) return null;
-  if (res.status === 403){
-    var remaining = res.headers.get('X-RateLimit-Remaining');
-    if (remaining === '0') throw new Error('GitHub API rate limit reached — please wait a few minutes and try again');
-  }
   if (!res.ok){
     var errBody = await res.json().catch(function(){ return {}; });
     throw new Error('GitHub read of "'+path+'" failed ('+res.status+'): '+(errBody.message||res.statusText));
   }
-  var json = await res.json();
-  if (json.content){
-    json.text = decodeURIComponent(escape(atob(json.content.replace(/\n/g,''))));
-    return json;
-  }
-  /* Files over ~1MB come back without inline `content` — the Contents
-     API instead gives a download_url for the raw bytes. */
-  if (json.download_url){
-    var rawRes = await fetch(json.download_url, { cache:'no-store' });
-    if (!rawRes.ok) throw new Error('GitHub raw fetch of "'+path+'" failed ('+rawRes.status+')');
-    json.text = await rawRes.text();
-    return json;
-  }
-  return json;
+  return res.json();
 }
 async function ghPutFile(path, contentString, message, shaOrNull){
   var base64 = btoa(unescape(encodeURIComponent(contentString)));
@@ -2676,12 +3243,30 @@ async function doPublish(){
   var settings = GITHUB_SETTINGS;
   showFreeze('Publishing…');
   try{
+    /* 1) publish each topic's own content file (product-section-topic.json)
+       FIRST, so every topic has a stable file pointer before index.html /
+       data.json (which embed those pointers) get built below. Filenames
+       are assigned once and kept stable, so renaming a topic later doesn't
+       orphan its published content. Topics never opened this session
+       (still lazy) are left untouched — nothing changed about their
+       content, so there's nothing to rewrite. */
+    for (var i=0; i<data.topics.length; i++){
+      var t = data.topics[i];
+      var sec = getSection(t.sectionId);
+      var prod = sec ? getProduct(sec.productId) : null;
+      t.file = t.file || topicFile(prod, sec, t);
+      if (!t._loaded) continue;
+      var topicPath = siblingPath(t.file);
+      var existingTopic = await ghGetFile(topicPath);
+      await ghPutFile(topicPath, JSON.stringify({blocks: t.blocks||[]}, null, 2), 'Publish topic content: '+t.title, existingTopic ? existingTopic.sha : null);
+    }
+
     var html = buildStaticSite();
 
-    /* 1) back up the current index.html so Revert can restore it, THEN overwrite it */
+    /* 2) back up the current index.html so Revert can restore it, THEN overwrite it */
     var existing = await ghGetFile(settings.path);
-    if (existing && existing.text){
-      localStorage.setItem(REVERT_KEY, JSON.stringify({ path: settings.path, content: existing.text }));
+    if (existing && existing.content){
+      localStorage.setItem(REVERT_KEY, JSON.stringify({ path: settings.path, contentBase64: existing.content }));
     }
     var putResult = await ghPutFile(settings.path, html, 'Publish documentation', existing ? existing.sha : null);
     if (putResult && putResult.content && putResult.content.sha){
@@ -2691,34 +3276,29 @@ async function doPublish(){
     }
     setRevertActive(true);
 
-    /* 2) publish the slim metadata document alongside it */
+    /* 3) publish data.json — metadata only (products, sections, topic
+       titles/order/pointers). Never contains blocks, so it stays small
+       and fast to fetch no matter how large the knowledge base grows. */
+    var metaData = {
+      products: data.products,
+      sections: data.sections,
+      topics: data.topics.map(function(t){
+        return {id:t.id, sectionId:t.sectionId, title:t.title, order:t.order, updated:t.updated, file:t.file};
+      }),
+      changelog: data.changelog
+    };
     var dataPath = siblingPath('data.json');
     var existingData = await ghGetFile(dataPath);
-    await ghPutFile(dataPath, JSON.stringify(data, null, 2), 'Publish knowledge base metadata', existingData ? existingData.sha : null);
+    await ghPutFile(dataPath, JSON.stringify(metaData, null, 2), 'Publish knowledge base data', existingData ? existingData.sha : null);
 
-    /* 3) publish only the topic content files that actually changed since
-       the last publish — this is what keeps publish fast as the KB grows. */
-    var dirtyIds = Object.keys(dirtyTopicIds);
-    showFreeze('Publishing… (' + dirtyIds.length + ' topic file' + (dirtyIds.length===1?'':'s') + ')');
-    for (var i=0;i<dirtyIds.length;i++){
-      var topicId = dirtyIds[i];
-      var t = getTopic(topicId);
-      if (!t || !t.file) continue;
-      var blocks = topicBlocks(t);
-      var contentPath = siblingPath(t.file);
-      var existingContent = await ghGetFile(contentPath);
-      await ghPutFile(contentPath, JSON.stringify({ id:t.id, blocks:blocks }, null, 2), 'Update topic content: '+t.title, existingContent ? existingContent.sha : null);
-    }
-    clearDirtyTopics();
-
-    /* 4) make sure tickets.json exists (never clobber submitted tickets) */
+    /* 3b) make sure tickets.json exists (never clobber submitted tickets) */
     var ticketsPath = siblingPath('tickets.json');
     var existingTickets = await ghGetFile(ticketsPath);
     if (!existingTickets){
       await ghPutFile(ticketsPath, JSON.stringify([], null, 2), 'Initialise support tickets store', null);
     }
 
-    /* 5) (re)publish the support tickets admin page */
+    /* 4) (re)publish the support tickets admin page */
     var ticketsHtml = buildSupportTicketsSite();
     var ticketsPagePath = siblingPath('support-tickets.html');
     var existingTicketsPage = await ghGetFile(ticketsPagePath);
@@ -2748,7 +3328,8 @@ async function doRevert(raw){
   showFreeze('Reverting…');
   try{
     var current = await ghGetFile(backup.path);
-    await ghPutFile(backup.path, backup.content, 'Revert to previous version', current ? current.sha : backup.newSha);
+    var decoded = decodeURIComponent(escape(atob(backup.contentBase64.replace(/\n/g,''))));
+    await ghPutFile(backup.path, decoded, 'Revert to previous version', current ? current.sha : backup.newSha);
     localStorage.removeItem(REVERT_KEY);
     setRevertActive(false);
     hideFreeze();
@@ -2779,7 +3360,6 @@ loadAll(function(){
   renderFavList();
   renderMain();
   bindSearch();
-  bindImageLightbox();
   var remaining = Math.max(0, 3000 - (Date.now() - APP_BOOT_TIME));
   setTimeout(revealApp, remaining);
 });
