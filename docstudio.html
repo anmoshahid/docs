@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Knowledge Base Studio</title>
+<title>Axtroid DOC Studio</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
@@ -109,6 +109,9 @@
   .fav-text{display:flex;flex-direction:column;min-width:0;}
   .fav-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .fav-product{font-size:.7rem;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  /* "What You Will Find" quick-nav — bold + accent-highlighted while its section is in view */
+  #topicSummaryList li a{transition:color .12s,background .12s;}
+  #topicSummaryList li a.is-active{background:#F1ECE1;color:var(--accent-dark);font-weight:700;}
 
   /* main */
   .main{grid-area:main;padding:36px 48px 80px;max-width:820px;}
@@ -268,6 +271,9 @@
   .article-body a.rte-ext-link{color:#1a56db;text-decoration:underline;}
   .article-body a.rte-mail-link{color:#2F7A34;text-decoration:underline;}
   .article-body a.rte-int-link{color:var(--accent-dark);text-decoration:underline;}
+  /* Every hyperlink in rendered/edited content reads slightly bold + underlined,
+     regardless of link type, so links are always visually distinct from body text. */
+  .article-body a, .rte-editable a{font-weight:700;text-decoration:underline;text-underline-offset:2px;}
   /* Table in RTE */
   .rte-editable table{border-collapse:collapse;width:100%;margin:8px 0;}
   .rte-editable table td,.rte-editable table th{border:1px solid var(--paper-line);padding:6px 10px;font-size:.9rem;min-width:60px;}
@@ -580,7 +586,7 @@
     <button class="rightbar-toggle" id="rightbarToggle" title="Collapse">›</button>
     <div class="rightbar-body">
       <div class="rightbar-section" id="topicSummarySection" style="display:none;">
-        <div class="rightbar-heading">On This Page</div>
+        <div class="rightbar-heading">What You Will Find</div>
         <ul class="general-list" id="topicSummaryList"></ul>
       </div>
       <div class="rightbar-section">
@@ -655,6 +661,8 @@
       <div class="form-row"><label>Path to index.html</label><input type="text" id="ghPathInput" placeholder="e.g. documentation/docs/index.html"></div>
       <div class="form-row"><label>Branch</label><input type="text" id="ghBranchInput" placeholder="e.g. main"></div>
       <div class="form-row"><label>Personal access token</label><input type="text" id="ghTokenInput" placeholder="ghp_…"></div>
+      <div class="form-row"><label>Tickets relay URL (optional)</label><input type="text" id="ghTicketsRelayInput" placeholder="https://your-worker.example.workers.dev"></div>
+      <p style="font-size:.76rem;color:var(--text-muted);margin:-6px 0 4px;">Used by the <strong>published</strong> site so visitors can submit/manage tickets without your token ever being shipped to their browser. See the deployment notes for the small relay function to deploy this against. Leave blank to keep ticket sync editor-only.</p>
       <button class="modal-submit-btn" id="ghSettingsSaveBtn">Connect</button>
     </div>
   </div>
@@ -1254,45 +1262,279 @@ function compressImage(file, cb){
 
 /* ============================================================
    PDF — "Save as PDF" renders the open topic straight to a
-   high-quality multi-page PDF and downloads it immediately
-   (html2canvas + jsPDF), no print dialog involved. "Print" still
-   uses the browser's native print dialog.
+   real PDF file and downloads it immediately with no dialog
+   (html2canvas + jsPDF). "Print" still opens the browser's
+   native print dialog separately.
    ============================================================ */
-function downloadTopicPdf(topicTitle){
-  var titleEl = document.querySelector('.article-title');
+var AXTROID_LOGO_URL = 'https://raw.githubusercontent.com/axtroid/support/main/axtroid-logo.png';
+/* Wait until every <img> in a container has actually finished loading (or
+   errored) before we rasterize it — otherwise html2canvas can snapshot the
+   page mid-load and bake in blank/broken image boxes. */
+function waitForImages(container){
+  var imgs = Array.prototype.slice.call(container.querySelectorAll('img'));
+  if (!imgs.length) return Promise.resolve([]);
+  return Promise.all(imgs.map(function(img){
+    if (img.complete && img.naturalWidth > 0) return Promise.resolve(null);
+    if (img.complete && img.naturalWidth === 0) return Promise.resolve(img); // already failed before we got here
+    return new Promise(function(resolve){
+      img.addEventListener('load', function(){ resolve(img.naturalWidth > 0 ? null : img); }, {once:true});
+      img.addEventListener('error', function(){ resolve(img); }, {once:true});
+    });
+  })).then(function(results){ return results.filter(Boolean); }); // just the broken ones
+}
+/* Swaps every broken <img> in the capture clone for a visible placeholder
+   BEFORE html2canvas rasterizes it — otherwise a broken image silently
+   renders as blank white space and the reader can't tell an image was
+   ever supposed to be there. */
+function markBrokenImagesForCapture(brokenImgs){
+  brokenImgs.forEach(function(img){
+    var label = img.getAttribute('alt') || (img.getAttribute('src')||'').split('/').pop() || 'image';
+    var ph = document.createElement('div');
+    ph.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:8px;min-height:110px;'+
+      'border:2px dashed #C94A3B;border-radius:8px;background:#FBEAE8;color:#B3261E;'+
+      'font-family:inherit;font-size:13px;font-weight:600;padding:16px;box-sizing:border-box;text-align:center;';
+    ph.textContent = '\u26A0 Image failed to load: ' + label;
+    if (img.parentNode) img.parentNode.replaceChild(ph, img);
+  });
+}
+/* The 18x18 callout icons (info/tip/warning/etc.) are sized purely via a
+   CSS rule scoped under ".article-body" (".article-body .rte-callout-icon
+   svg"). If that ancestor class is lost during capture (e.g. only the
+   inner HTML gets cloned into a plain wrapper div) the rule no longer
+   matches, the <svg> falls back to its raw internal viewBox size, and it
+   rasterizes as a huge black shape. Forcing an explicit inline size here
+   makes it correct regardless of which ancestor classes survive cloning. */
+function fixSvgSizesForCapture(container){
+  container.querySelectorAll('svg').forEach(function(svg){
+    var inCallout = !!svg.closest('.rte-callout-icon');
+    var rect = svg.getBoundingClientRect();
+    var w = inCallout ? 18 : (rect.width > 0 && rect.width < 40 ? Math.round(rect.width) : 18);
+    var h = inCallout ? 18 : (rect.height > 0 && rect.height < 40 ? Math.round(rect.height) : 18);
+    svg.setAttribute('width', w);
+    svg.setAttribute('height', h);
+    svg.style.width = w + 'px';
+    svg.style.height = h + 'px';
+    svg.style.display = 'inline-block';
+    svg.style.flexShrink = '0';
+  });
+}
+/* Preloads the Axtroid logo once as an <img> so jsPDF can draw it directly
+   into the header of every page without re-fetching it per page. */
+var _pdfLogoImg = null;
+function loadPdfLogo(){
+  if (_pdfLogoImg) return Promise.resolve(_pdfLogoImg);
+  return new Promise(function(resolve){
+    var img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function(){ _pdfLogoImg = img; resolve(img); };
+    img.onerror = function(){ resolve(null); };
+    img.src = AXTROID_LOGO_URL;
+  });
+}
+function downloadTopicPdf(topicTitle, productName){
   var bodyEl = document.querySelector('.article-body');
   if (!bodyEl || !window.html2canvas || !window.jspdf){ window.print(); return; }
   showFreeze('Preparing PDF…');
+  /* Clone the whole .article-body node (not just its innerHTML) so every
+     class-scoped style — tables, callouts, icon sizing, colors — still
+     applies exactly as it does on the live page. */
+  var bodyClone = bodyEl.cloneNode(true);
   var wrap = document.createElement('div');
   wrap.style.cssText = 'position:fixed;left:-9999px;top:0;background:#fff;width:760px;padding:40px;font-family:'+getComputedStyle(document.body).fontFamily+';color:#201F23;';
-  wrap.innerHTML = '<h1 style="font-size:26px;font-weight:700;margin:0 0 20px;">'+escapeHtml(topicTitle||'')+'</h1>' + bodyEl.innerHTML;
+  var titleEl = document.createElement('h1');
+  titleEl.style.cssText = 'font-family:'+getComputedStyle(document.body).fontFamily+';font-size:26px;font-weight:700;margin:0 0 20px;color:#1C1B1F;';
+  titleEl.textContent = topicTitle || '';
+  wrap.appendChild(titleEl);
+  wrap.appendChild(bodyClone);
   document.body.appendChild(wrap);
-  window.html2canvas(wrap, {scale:3, useCORS:true, backgroundColor:'#ffffff'}).then(function(canvas){
+  fixSvgSizesForCapture(wrap);
+
+  var headings = Array.prototype.slice.call(bodyClone.querySelectorAll('h1, h2, h3')).map(function(h){
+    return {
+      text: h.textContent || '',
+      level: h.tagName === 'H1' ? 1 : (h.tagName === 'H2' ? 2 : 3),
+      top: h.getBoundingClientRect().top - wrap.getBoundingClientRect().top
+    };
+  });
+  /* Every real hyperlink inside the body — captured here (position + href)
+     because once the content is rasterized into a canvas image below, the
+     <a> tags themselves are just flat pixels with no click target. We
+     overlay invisible clickable rectangles at these coordinates once the
+     PDF pages exist (see buildTopicPdf). */
+  var wrapRectForLinks = wrap.getBoundingClientRect();
+  var links = Array.prototype.slice.call(bodyClone.querySelectorAll('a[href]')).filter(function(a){
+    var href = a.getAttribute('href') || '';
+    return href && href.charAt(0) !== '#' && !/^javascript:/i.test(href);
+  }).map(function(a){
+    var r = a.getBoundingClientRect();
+    return { href: a.href, top: r.top - wrapRectForLinks.top, left: r.left - wrapRectForLinks.left, width: r.width, height: r.height };
+  });
+  /* Images and callout boxes should never be sliced in half by a page
+     break — captured here (top + height) so buildTopicPdf can nudge a
+     page break earlier to keep each one whole on a single page. */
+  var atomicBlocks = Array.prototype.slice.call(bodyClone.querySelectorAll('figure, .callout')).map(function(el){
+    var r = el.getBoundingClientRect();
+    return { top: r.top - wrapRectForLinks.top, height: r.height };
+  }).filter(function(b){ return b.height > 0; });
+
+  Promise.all([waitForImages(wrap), loadPdfLogo()]).then(function(results){
+    var brokenImgs = results[0], logoImg = results[1];
+    if (brokenImgs.length) markBrokenImagesForCapture(brokenImgs);
+    var wrapCssHeight = wrap.scrollHeight;
+    var renderScale = Math.min(4, Math.max(3, (window.devicePixelRatio||1) * 2));
+    return window.html2canvas(wrap, {scale:renderScale, useCORS:true, allowTaint:true, backgroundColor:'#ffffff', imageTimeout:15000})
+      .then(function(canvas){ return {canvas:canvas, logoImg:logoImg, wrapCssHeight:wrapCssHeight, brokenCount:brokenImgs.length}; });
+  }).then(function(r){
     document.body.removeChild(wrap);
-    var imgData = canvas.toDataURL('image/jpeg', 0.98);
-    var jsPDF = window.jspdf.jsPDF;
-    var pdf = new jsPDF({unit:'pt', format:'a4'});
-    var pageW = pdf.internal.pageSize.getWidth();
-    var pageH = pdf.internal.pageSize.getHeight();
-    var imgW = pageW;
-    var imgH = canvas.height * imgW / canvas.width;
-    var heightLeft = imgH, y = 0;
-    pdf.addImage(imgData, 'JPEG', 0, y, imgW, imgH, '', 'FAST');
-    heightLeft -= pageH;
-    while (heightLeft > 0){
-      y = heightLeft - imgH;
-      pdf.addPage();
-      pdf.addImage(imgData, 'JPEG', 0, y, imgW, imgH, '', 'FAST');
-      heightLeft -= pageH;
-    }
-    pdf.save(((topicTitle||'document').toLowerCase().replace(/[^a-z0-9]+/g,'-')||'document')+'.pdf');
+    buildTopicPdf(r.canvas, r.logoImg, topicTitle, productName, headings, r.wrapCssHeight, links, atomicBlocks);
     hideFreeze();
+    if (r.brokenCount){
+      showToast(r.brokenCount + ' image' + (r.brokenCount>1?'s':'') + ' could not be loaded — marked in the exported PDF', true);
+    }
   }).catch(function(e){
     console.error('PDF generation failed', e);
     if (document.body.contains(wrap)) document.body.removeChild(wrap);
     hideFreeze();
     showToast('PDF generation failed', true);
   });
+}
+/* Assembles the final PDF: a compact Contents page with clickable links
+   (plus a real PDF outline/bookmark sidebar where jsPDF supports it),
+   followed by the rasterized topic content — with a centered logo header
+   and a topic/page-number/product footer stamped on every page. Page
+   breaks are nudged earlier than a strict fixed-height slice whenever a
+   fixed slice would otherwise cut straight through an image or callout
+   box, so those always land whole on one page. */
+function buildTopicPdf(canvas, logoImg, topicTitle, productName, headings, wrapCssHeight, links, atomicBlocks){
+  var jsPDF = window.jspdf.jsPDF;
+  var pdf = new jsPDF({unit:'pt', format:'a4', compress:true});
+  var pageW = pdf.internal.pageSize.getWidth();
+  var pageH = pdf.internal.pageSize.getHeight();
+  var marginTop = 56, marginBottom = 34;
+  var contentH = pageH - marginTop - marginBottom;
+  var imgData = canvas.toDataURL('image/png');
+  var imgW = pageW;
+  var imgH = canvas.height * imgW / canvas.width;
+  var CAPTURE_WIDTH = 760; // matches the fixed CSS width of the offscreen capture wrap
+  var scale = imgW / CAPTURE_WIDTH;
+
+  /* ---- Work out page-break points. Default is a straight fixed-height
+     slice every contentH points; but whenever that slice line would land
+     inside an image/callout, the break is pulled back to the start of
+     that block instead (unless the block is itself taller than one page,
+     in which case there's no way to avoid a cut and it's left as-is). ---- */
+  var atomicRanges = (atomicBlocks||[]).map(function(b){
+    return { top: b.top*scale, bottom: (b.top+b.height)*scale };
+  }).sort(function(a,b){ return a.top - b.top; });
+  var pageBreaksPt = [0];
+  (function(){
+    var y = 0, guard = 0;
+    while (y < imgH - 0.5 && guard < 2000){
+      guard++;
+      var candidate = y + contentH;
+      if (candidate >= imgH){ pageBreaksPt.push(imgH); return; }
+      for (var bi=0; bi<atomicRanges.length; bi++){
+        var rg = atomicRanges[bi];
+        if (rg.top < candidate && rg.bottom > candidate && rg.top > y + 1){ candidate = rg.top; break; }
+      }
+      pageBreaksPt.push(candidate);
+      y = candidate;
+    }
+    if (pageBreaksPt[pageBreaksPt.length-1] < imgH) pageBreaksPt.push(imgH);
+  })();
+  var contentPageCount = pageBreaksPt.length - 1;
+  function pageIndexForY(yPt){
+    for (var i=0; i<contentPageCount; i++){ if (yPt < pageBreaksPt[i+1] || i===contentPageCount-1) return i; }
+    return contentPageCount - 1;
+  }
+
+  function drawHeader(){
+    if (logoImg){
+      var lh = 24, lw = lh * (logoImg.naturalWidth / logoImg.naturalHeight || 3);
+      pdf.addImage(logoImg, 'PNG', (pageW - lw) / 2, 14, lw, lh);
+    }
+    pdf.setDrawColor(230, 162, 59);
+    pdf.setLineWidth(1.2);
+    pdf.line(40, marginTop - 10, pageW - 40, marginTop - 10);
+  }
+  function drawFooter(pageNum, pageTotal){
+    pdf.setDrawColor(231, 226, 216);
+    pdf.setLineWidth(0.75);
+    pdf.line(40, pageH - marginBottom + 8, pageW - 40, pageH - marginBottom + 8);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8.5);
+    pdf.setTextColor(110, 106, 102);
+    pdf.text(topicTitle || '', 40, pageH - marginBottom + 22);
+    pdf.text('Page '+pageNum+' of '+pageTotal, pageW/2, pageH - marginBottom + 22, {align:'center'});
+    pdf.text(productName || '', pageW - 40, pageH - marginBottom + 22, {align:'right'});
+    pdf.setTextColor(0, 0, 0);
+  }
+
+  /* ---- Page 1: Contents (only built when the topic actually has headings) ---- */
+  var totalPages = 1 + contentPageCount;
+  var outline = (pdf.outline && typeof pdf.outline.add === 'function') ? pdf.outline : null;
+  if (headings.length){
+    drawHeader();
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(18);
+    pdf.setTextColor(28, 27, 31);
+    pdf.text('Contents', 40, 90);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(11);
+    var y = 122;
+    headings.forEach(function(h){
+      if (y > pageH - marginBottom - 20){ /* Contents itself never spans multiple pages for a normal topic; guard anyway */ return; }
+      var targetPage = 2 + pageIndexForY(h.top * scale);
+      var indent = 40 + (h.level - 1) * 16;
+      pdf.setTextColor(201, 122, 31);
+      pdf.textWithLink(h.text, indent, y, {pageNumber: targetPage});
+      if (outline){ try{ outline.add(null, h.text, {pageNumber: targetPage}); }catch(e){} }
+      y += 20;
+    });
+    pdf.setTextColor(0, 0, 0);
+    drawFooter(1, totalPages);
+  } else {
+    totalPages = contentPageCount; // no Contents page needed
+  }
+
+  /* ---- Content pages: the rasterized topic, sliced at the page-break
+     points computed above, with header/footer margins reserved on every
+     page. ---- */
+  for (var p = 0; p < contentPageCount; p++){
+    pdf.addPage();
+    var yPos = marginTop - pageBreaksPt[p];
+    pdf.addImage(imgData, 'PNG', 0, yPos, imgW, imgH, '', 'FAST');
+    /* cover any bleed into the header/footer bands, then draw them on top */
+    pdf.setFillColor(255, 255, 255);
+    pdf.rect(0, 0, pageW, marginTop, 'F');
+    pdf.rect(0, pageH - marginBottom, pageW, marginBottom, 'F');
+    drawHeader();
+    drawFooter(headings.length ? p + 2 : p + 1, totalPages);
+  }
+
+  /* ---- Restore clickable hyperlinks: the content above is a flat rasterized
+     image, so any <a href> from the article body has to be re-added as an
+     invisible clickable rectangle at its original position. A link that
+     straddles a page break is split into one rectangle per page. ---- */
+  if (links && links.length){
+    links.forEach(function(l){
+      if (!l.width || !l.height) return;
+      var yTop = l.top * scale, yBottom = (l.top + l.height) * scale;
+      var xLeft = l.left * scale, wScaled = l.width * scale;
+      for (var pp = 0; pp < contentPageCount; pp++){
+        var pStart = pageBreaksPt[pp], pEnd = pageBreaksPt[pp+1];
+        var segTop = Math.max(yTop, pStart), segBottom = Math.min(yBottom, pEnd);
+        var hSeg = segBottom - segTop;
+        if (hSeg <= 0) continue;
+        var pageY = marginTop + (segTop - pStart);
+        var pageNum = headings.length ? pp + 2 : pp + 1;
+        pdf.setPage(pageNum);
+        pdf.link(xLeft, pageY, wScaled, hSeg, {url: l.href});
+      }
+    });
+  }
+
+  pdf.save(((topicTitle||'document').toLowerCase().replace(/[^a-z0-9]+/g,'-')||'document')+'.pdf');
 }
 
 /* ============================================================
@@ -1309,7 +1551,7 @@ function printMenuHtml(){
       '<button type="button" data-print-action="print">🖨 Print</button>'+
     '</div></div>';
 }
-function bindPrintMenu(topicTitle){
+function bindPrintMenu(topicTitle, productName){
   var menu = document.getElementById('printMenu');
   var btn = document.getElementById('printBtn');
   if (!menu || !btn) return;
@@ -1318,7 +1560,7 @@ function bindPrintMenu(topicTitle){
     b.addEventListener('click', function(){
       menu.classList.remove('is-open');
       var action = b.getAttribute('data-print-action');
-      if (action==='pdf'){ downloadTopicPdf(topicTitle); return; }
+      if (action==='pdf'){ downloadTopicPdf(topicTitle, productName); return; }
       var prevTitle = document.title;
       document.title = topicTitle || prevTitle;
       var restored = false;
@@ -1416,16 +1658,18 @@ function renderHomeTopicGrid(productId){
   });
 }
 
-/* "On This Page" summary in the right sidebar — lists every heading in the
+/* "What You Will Find" summary in the right sidebar — lists every heading in the
    currently open topic so the reader can jump straight to a section. */
 function hideTopicSummary(){
   var section = document.getElementById('topicSummarySection');
   if (section) section.style.display = 'none';
 }
+var _topicSummaryScrollHandler = null;
 function renderTopicSummary(t){
   var section = document.getElementById('topicSummarySection');
   var list = document.getElementById('topicSummaryList');
   if (!section || !list) return;
+  if (_topicSummaryScrollHandler){ window.removeEventListener('scroll', _topicSummaryScrollHandler); _topicSummaryScrollHandler = null; }
   var headings = (t.blocks||[]).filter(function(b){ return b.type==='heading'; });
   if (!headings.length){ section.style.display = 'none'; list.innerHTML=''; return; }
   section.style.display = 'block';
@@ -1434,13 +1678,29 @@ function renderTopicSummary(t){
     var text = (b.text!=null ? b.text : (b.html||'').replace(/<[^>]+>/g,'')).trim() || 'Untitled section';
     return '<li'+(lvl>=3?' style="padding-left:16px;"':'')+'><a href="#blk-'+b.id+'" data-jump="'+b.id+'">'+escapeHtml(text)+'</a></li>';
   }).join('');
-  list.querySelectorAll('[data-jump]').forEach(function(el){
+  var links = list.querySelectorAll('[data-jump]');
+  links.forEach(function(el){
     el.addEventListener('click', function(e){
       e.preventDefault();
       var target = document.getElementById('blk-'+el.getAttribute('data-jump'));
       if (target){ var y = target.getBoundingClientRect().top + window.pageYOffset - 74; window.scrollTo({top:y, behavior:'smooth'}); }
     });
   });
+  /* Scrollspy: highlight whichever heading is currently at the top of the viewport */
+  function updateActive(){
+    var activeId = null, bestTop = -Infinity;
+    headings.forEach(function(b){
+      var target = document.getElementById('blk-'+b.id);
+      if (!target) return;
+      var top = target.getBoundingClientRect().top;
+      if (top - 90 <= 0 && top > bestTop){ bestTop = top; activeId = b.id; }
+    });
+    if (!activeId && headings.length) activeId = headings[0].id;
+    links.forEach(function(el){ el.classList.toggle('is-active', el.getAttribute('data-jump')===activeId); });
+  }
+  _topicSummaryScrollHandler = function(){ window.requestAnimationFrame(updateActive); };
+  window.addEventListener('scroll', _topicSummaryScrollHandler, {passive:true});
+  updateActive();
 }
 
 function renderArticle(main){
@@ -1466,7 +1726,7 @@ function renderArticle(main){
       '</span>'+
     '</div>';
   document.getElementById('favToggleBtn').addEventListener('click', function(){ toggleFav(t.id); renderArticle(main); });
-  bindPrintMenu(t.title);
+  bindPrintMenu(t.title, prod.name);
   bindTopicFeedback();
   renderTopicSummary(t);
 }
@@ -1640,6 +1900,8 @@ function rteToolbarHtml(blkId, isTextBlock){
     '<button class="rte-btn" data-cmd="italic" title="Italic"><i>I</i></button>'+
     '<button class="rte-btn" data-cmd="underline" title="Underline"><u>U</u></button>'+
     '<span class="rte-sep"></span>'+
+    '<button class="rte-btn" data-rte="clean" title="Clear formatting — strip highlights, colors and fonts, keep plain text">🧹</button>'+
+    '<span class="rte-sep"></span>'+
     '<button class="rte-btn" data-cmd="insertUnorderedList" title="Bullet list">••</button>'+
     '<button class="rte-btn" data-cmd="insertOrderedList" title="Numbered list">1.</button>'+
     '<button class="rte-btn" data-cmd="indent" title="Sub-bullet">⇥</button>'+
@@ -1735,10 +1997,21 @@ function showCalloutPicker(anchorEl, targetEl){
       rteRestoreRange();
       var iconHtml = '<span class="rte-callout-icon" contenteditable="false">'+item.icon+'</span>';
       var titleHtml = '<span class="rte-callout-title">'+item.label+'</span>';
-      var innerHtml = '<div class="rte-callout-inner">'+titleHtml+'<span class="rte-callout-text"> Type your text here…</span></div>';
+      var textId = 'rteCalloutText'+Date.now()+Math.floor(Math.random()*1000);
+      var innerHtml = '<div class="rte-callout-inner">'+titleHtml+'<span class="rte-callout-text" id="'+textId+'"> Type your text here…</span></div>';
       var fullHtml = '<div class="rte-callout '+item.cls+'">'+iconHtml+innerHtml+'</div><p><br></p>';
       document.execCommand('insertHTML', false, fullHtml);
       targetEl.dispatchEvent(new Event('input'));
+      /* Select the placeholder text immediately so the very next keystroke replaces it — no extra click needed. */
+      var placeholder = document.getElementById(textId);
+      if (placeholder){
+        placeholder.removeAttribute('id');
+        var range = document.createRange();
+        range.selectNodeContents(placeholder);
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
     });
     picker.appendChild(btn);
   });
@@ -1770,6 +2043,15 @@ function bindRteToolbar(card, b, isTextBlock){
     b.html = editable.innerHTML;
     b.text = undefined;
     saveData();
+  });
+
+  /* Pasted content (from Word, web pages, etc.) always lands as plain text —
+     no imported fonts, highlight colors, or background shading to clean up later. */
+  editable.addEventListener('paste', function(e){
+    e.preventDefault();
+    var text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    document.execCommand('insertText', false, text);
+    editable.dispatchEvent(new Event('input'));
   });
 
   /* Format selector (text blocks only) */
@@ -1852,6 +2134,9 @@ function bindRteToolbar(card, b, isTextBlock){
         showCalloutPicker(btn, editable);
       } else if (action === 'code'){
         rteInsertHtmlAtCursor('<pre contenteditable="true">// code here</pre><p><br></p>', editable);
+      } else if (action === 'clean'){
+        cleanRteSelection(editable);
+        editable.dispatchEvent(new Event('input'));
       }
     });
   });
@@ -1915,6 +2200,26 @@ function closeRteLinkTableModal(){
   rteModalTargetEl = null;
 }
 
+/* "Clear formatting" button: with a selection, replaces just that selection
+   with its plain text (dropping bold/italic/color/highlight/font); with no
+   selection, rebuilds the whole block as plain paragraphs. Either way, no
+   inline styles, fonts, or highlight colors survive. */
+function cleanRteSelection(editable){
+  var sel = window.getSelection();
+  if (sel && sel.rangeCount && !sel.getRangeAt(0).collapsed && editable.contains(sel.anchorNode)){
+    var range = sel.getRangeAt(0);
+    var text = range.toString();
+    range.deleteContents();
+    var node = document.createTextNode(text);
+    range.insertNode(node);
+    range.setStartAfter(node); range.setEndAfter(node);
+    sel.removeAllRanges(); sel.addRange(range);
+  } else {
+    var full = editable.innerText || editable.textContent || '';
+    var paras = full.split(/\n{2,}/).map(function(p){ return '<p>'+escapeHtml(p).replace(/\n/g,'<br>')+'</p>'; }).join('');
+    editable.innerHTML = paras || '<p><br></p>';
+  }
+}
 function rteInsertHtmlAtCursor(html){
   if (rteModalTargetEl) rteModalTargetEl.focus();
   rteRestoreRange();
@@ -2171,23 +2476,58 @@ function bindBlockCard(t, b){
 /* ============================================================
    SEARCH
    ============================================================ */
+/* ============================================================
+   WILD SEARCH — forgiving fuzzy matching: typos, partial words,
+   and out-of-order fragments all still find the right topic.
+   Direct substring hits rank highest; fuzzy subsequence hits
+   (skipped/mismatched letters) still surface, lowest first.
+   ============================================================ */
+function wildScore(query, target){
+  if (!query) return 0;
+  query = query.toLowerCase(); target = (target||'').toLowerCase();
+  var direct = target.indexOf(query);
+  if (direct > -1) return 1000 - direct; /* exact substring: best, earlier position wins */
+  var ti = 0, gap = 0, matched = 0;
+  for (var qi=0; qi<query.length; qi++){
+    var ch = query[qi], found = -1;
+    for (var j=ti; j<target.length; j++){ if (target[j]===ch){ found=j; break; } }
+    if (found===-1) continue;
+    matched++; gap += (found-ti); ti = found+1;
+  }
+  if (matched < Math.max(1, Math.ceil(query.length*0.6))) return -1; /* too little matched: reject */
+  return 200 + matched*10 - gap;
+}
 function buildSearchIndex(){
   var idx = [];
   data.topics.forEach(function(t){
     var sec = getSection(t.sectionId); if(!sec) return;
     var prod = getProduct(sec.productId); if(!prod) return;
-    idx.push({id:t.id, title:t.title, path: prod.name+' › '+sec.title});
+    var bodyText = '';
+    if (t._loaded && t.blocks){ bodyText = t.blocks.map(function(b){ return b.text!=null?b.text:(b.html||'').replace(/<[^>]+>/g,' '); }).join(' '); }
+    idx.push({id:t.id, title:t.title, path: prod.name+' › '+sec.title, body: bodyText});
   });
   return idx;
+}
+function wildFilter(idx, q){
+  var out = [];
+  idx.forEach(function(e){
+    var sTitle = wildScore(q, e.title) * 3;
+    var sPath = wildScore(q, e.path);
+    var sBody = e.body ? wildScore(q, e.body) : -1;
+    var best = Math.max(sTitle>0?sTitle:-1, sPath, sBody);
+    if (best > 0) out.push({entry:e, score:best});
+  });
+  out.sort(function(a,b){ return b.score - a.score; });
+  return out.map(function(o){ return o.entry; });
 }
 function bindSearch(){
   var wrap = document.getElementById('searchWrap');
   var input = document.getElementById('kbSearch');
   var results = document.getElementById('searchResults');
   input.addEventListener('input', function(){
-    var q = input.value.trim().toLowerCase();
+    var q = input.value.trim();
     if (!q){ wrap.classList.remove('has-results'); return; }
-    var matches = buildSearchIndex().filter(function(e){ return e.title.toLowerCase().indexOf(q)>-1 || e.path.toLowerCase().indexOf(q)>-1; }).slice(0,15);
+    var matches = wildFilter(buildSearchIndex(), q).slice(0,15);
     results.innerHTML = matches.length ? matches.map(function(e){ return '<div class="search-result" data-goto="'+e.id+'"><div class="r-title">'+escapeHtml(e.title)+'</div><div class="r-path">'+escapeHtml(e.path)+'</div></div>'; }).join('') : '<div class="search-result">No matches.</div>';
     wrap.classList.add('has-results');
     results.querySelectorAll('[data-goto]').forEach(function(el){
@@ -2395,31 +2735,44 @@ function buildSupportTicketsSite(){
 }
 function supportTicketsRuntimeJs(){
   return '(' + function(){
-    var GH = window.__GH_CONFIG__ || {settings:{}, token:null};
+    /* This page is served from the same public repo as the docs site, so
+       reading tickets.json needs no token — the GitHub Contents API allows
+       anonymous GETs of a public repo. Only *writing* a status change needs
+       credentials, and this page has no safe way to hold a repo-write token
+       (it's just a static file anyone with the URL can open) — so writes go
+       through the same relay the public ticket form uses, gated by an admin
+       key that's requested once and never baked into the page itself. */
+    var GH = window.__GH_CONFIG__ || {settings:{}};
+    var RELAY = GH.settings.ticketsRelayUrl || '';
     function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
     function ghGetUrl(path){ return 'https://api.github.com/repos/'+GH.settings.owner+'/'+GH.settings.repo+'/contents/'+path+'?ref='+GH.settings.branch; }
-    function ghPutUrl(path){ return 'https://api.github.com/repos/'+GH.settings.owner+'/'+GH.settings.repo+'/contents/'+path; }
-    function ghHeaders(json){ var h={Authorization:'Bearer '+GH.token, Accept:'application/vnd.github+json'}; if(json) h['Content-Type']='application/json'; return h; }
     function siblingPath(filename){ return (GH.settings.path||'').replace(/[^/]+$/,'') + filename; }
     function ghGetFile(path){
-      return fetch(ghGetUrl(path),{headers:ghHeaders(false)}).then(function(r){
+      return fetch(ghGetUrl(path),{headers:{Accept:'application/vnd.github+json'}}).then(function(r){
         if (r.status===404) return null;
         if (!r.ok) return r.json().catch(function(){return {};}).then(function(j){ throw new Error('GitHub read of "'+path+'" failed ('+r.status+'): '+(j.message||r.statusText)); });
         return r.json();
       });
     }
-    function ghPutFile(path, contentString, message, sha){
-      var body={message:message, content:btoa(unescape(encodeURIComponent(contentString))), branch:GH.settings.branch};
-      if (sha) body.sha = sha;
-      return fetch(ghPutUrl(path),{method:'PUT',headers:ghHeaders(true),body:JSON.stringify(body)}).then(function(r){
-        return r.json().catch(function(){return {};}).then(function(j){
-          if (!r.ok) throw new Error('GitHub write to "'+path+'" failed ('+r.status+'): '+(j.message||r.statusText));
-          return j;
-        });
+    function getAdminKey(){
+      var k = sessionStorage.getItem('kb_tickets_admin_key');
+      if (!k){ k = prompt('Admin key to update ticket status:') || ''; if (k) sessionStorage.setItem('kb_tickets_admin_key', k); }
+      return k;
+    }
+    function updateTicketStatus(id, status){
+      if (!RELAY) return Promise.reject(new Error('No tickets relay URL configured in ⚙ GitHub Settings.'));
+      var key = getAdminKey();
+      if (!key) return Promise.reject(new Error('Admin key required.'));
+      return fetch(RELAY+'/update-ticket-status', {
+        method:'POST', headers:{'Content-Type':'application/json','X-Admin-Key':key},
+        body: JSON.stringify({ owner:GH.settings.owner, repo:GH.settings.repo, branch:GH.settings.branch, path:GH.settings.path, id:id, status:status })
+      }).then(function(r){
+        if (r.status===401){ sessionStorage.removeItem('kb_tickets_admin_key'); throw new Error('Admin key rejected.'); }
+        if (!r.ok) return r.json().catch(function(){return {};}).then(function(j){ throw new Error(j.error||('relay failed ('+r.status+')')); });
+        return r.json();
       });
     }
     var ticketsPath = siblingPath('tickets.json');
-    var currentSha = null;
     function statusLabel(s){ return s==='in-progress' ? 'In Progress' : s==='resolved' ? 'Resolved' : 'Open'; }
     function render(list){
       var wrap = document.getElementById('ticketsList');
@@ -2441,7 +2794,6 @@ function supportTicketsRuntimeJs(){
       ghGetFile(ticketsPath).then(function(existing){
         var list = [];
         if (existing && existing.content){
-          currentSha = existing.sha;
           try{ list = JSON.parse(decodeURIComponent(escape(atob(existing.content.replace(/\n/g,''))))); }catch(e){ list = []; }
         }
         render(list);
@@ -2456,12 +2808,8 @@ function supportTicketsRuntimeJs(){
           var card = btn.closest('[data-ticket]');
           var id = card.getAttribute('data-ticket');
           var status = btn.getAttribute('data-set-status');
-          var ticket = list.find(function(t){ return t.id===id; });
-          if (!ticket) return;
-          ticket.status = status;
-          ghPutFile(ticketsPath, JSON.stringify(list, null, 2), 'Update ticket status', currentSha).then(function(res){
-            if (res && res.content) currentSha = res.content.sha;
-            render(list); bindActions(list);
+          updateTicketStatus(id, status).then(function(){
+            load(); // re-fetch from GitHub so the view reflects what actually got committed
           }).catch(function(e){ alert('Could not update status: '+e.message); });
         });
       });
@@ -2575,6 +2923,7 @@ function openGithubSettingsModal(){
   document.getElementById('ghPathInput').value = GITHUB_SETTINGS.path || '';
   document.getElementById('ghBranchInput').value = GITHUB_SETTINGS.branch || '';
   document.getElementById('ghTokenInput').value = GITHUB_TOKEN || '';
+  document.getElementById('ghTicketsRelayInput').value = GITHUB_SETTINGS.ticketsRelayUrl || '';
   document.getElementById('githubSettingsOverlay').classList.add('is-open');
 }
 function closeGithubSettingsModal(){ document.getElementById('githubSettingsOverlay').classList.remove('is-open'); }
@@ -2587,9 +2936,10 @@ document.getElementById('ghSettingsSaveBtn').addEventListener('click', function(
   var path = document.getElementById('ghPathInput').value.trim();
   var branch = document.getElementById('ghBranchInput').value.trim() || 'main';
   var token = document.getElementById('ghTokenInput').value.trim();
+  var ticketsRelayUrl = document.getElementById('ghTicketsRelayInput').value.trim().replace(/\/+$/, '');
   if (!owner || !repo || !path || !token){ alert('Owner, repo, path and token are all required.'); return; }
   Object.keys(GITHUB_SETTINGS).forEach(function(k){ delete GITHUB_SETTINGS[k]; });
-  Object.assign(GITHUB_SETTINGS, { owner: owner, repo: repo, path: path, branch: branch });
+  Object.assign(GITHUB_SETTINGS, { owner: owner, repo: repo, path: path, branch: branch, ticketsRelayUrl: ticketsRelayUrl });
   GITHUB_TOKEN = token;
   try{
     localStorage.setItem('github_settings', JSON.stringify(GITHUB_SETTINGS));
@@ -2616,9 +2966,12 @@ function buildStaticSite(){
     changelog: data.changelog
   };
   var json = JSON.stringify(slimData).replace(/</g,'\\u003c');
-  /* Baked-in so any visitor's browser (which has no localStorage entry for
-     these) can still file a support ticket that gets written to the repo,
-     and so the runtime can fetch topic content files by path. */
+  /* Only non-secret settings (owner/repo/branch/path + the public tickets
+     relay URL) are baked in here — GITHUB_TOKEN is intentionally never
+     included, since this file is served to every anonymous visitor.
+     Reading public repo content (topic files, tickets.json) works fine
+     without a token; writes (publishing, tickets) that DO need
+     credentials go through the editor itself or the tickets relay. */
   var ghConfig = JSON.stringify({ settings: GITHUB_SETTINGS
 }).replace(/</g,'\\u003c');
 
@@ -2635,7 +2988,7 @@ function buildStaticSite(){
         '<input type="search" id="kbSearch" placeholder="Search articles…" autocomplete="off"><div class="search-results" id="searchResults"></div></div>' +
         '<button class="rightbar-mobile-btn" id="rightbarMobileBtn" title="Favourites" aria-label="Favourites">☆</button>' +
         '</header>' +
-      '<aside class="sidebar" id="sidebar"><div class="sidebar-inner"><div class="sidebar-section"><div class="sidebar-heading"><span>Product</span></div>' +
+      '<aside class="sidebar" id="sidebar"><button class="sidebar-toggle" id="sidebarToggle" title="Collapse sidebar" aria-label="Collapse sidebar">‹</button><div class="sidebar-resizer" id="sidebarResizer"></div><div class="sidebar-inner"><div class="sidebar-section"><div class="sidebar-heading"><span>Product</span></div>' +
         '<select class="product-select" id="productSelect"></select></div>' +
         '<div class="sidebar-section" style="flex:1;"><div class="sidebar-heading"><span id="docsHeading">Documentation</span></div>' +
         '<ul class="nav-tree" id="navTree"></ul></div>' +
@@ -2644,7 +2997,7 @@ function buildStaticSite(){
       '<aside class="rightbar" id="rightbar">' +
         '<button class="rightbar-toggle" id="rightbarToggle" title="Collapse">›</button>' +
         '<div class="rightbar-body">' +
-        '<div class="rightbar-section" id="topicSummarySection" style="display:none;"><div class="rightbar-heading">On This Page</div>' +
+        '<div class="rightbar-section" id="topicSummarySection" style="display:none;"><div class="rightbar-heading">What You Will Find</div>' +
         '<ul class="general-list" id="topicSummaryList"></ul></div>' +
         '<div class="rightbar-section"><div class="rightbar-heading">Favourites</div>' +
         '<ul class="fav-list" id="favList"></ul><p class="fav-empty" id="favEmpty">Star an article to pin it here.</p></div>' +
@@ -2760,49 +3113,237 @@ function exportRuntimeJs(){
       document.addEventListener('pointercancel', function(){ clearTimeout(holdTimer); if(holding) close(); });
       document.addEventListener('contextmenu', function(e){ if(holding) e.preventDefault(); });
     })();
-    /* ---------- direct PDF download (html2canvas + jsPDF) ---------- */
-    function downloadTopicPdf(topicTitle){
+    /* ---------- Save as PDF: direct download via html2canvas + jsPDF (logo header, topic/page/product footer, Contents page) ---------- */
+    function waitForImages(container){
+      var imgs=Array.prototype.slice.call(container.querySelectorAll('img'));
+      if(!imgs.length) return Promise.resolve([]);
+      return Promise.all(imgs.map(function(img){
+        if(img.complete && img.naturalWidth>0) return Promise.resolve(null);
+        if(img.complete && img.naturalWidth===0) return Promise.resolve(img);
+        return new Promise(function(resolve){
+          img.addEventListener('load',function(){ resolve(img.naturalWidth>0?null:img); },{once:true});
+          img.addEventListener('error',function(){ resolve(img); },{once:true});
+        });
+      })).then(function(results){ return results.filter(Boolean); });
+    }
+    function markBrokenImagesForCapture(brokenImgs){
+      brokenImgs.forEach(function(img){
+        var label=img.getAttribute('alt') || (img.getAttribute('src')||'').split('/').pop() || 'image';
+        var ph=document.createElement('div');
+        ph.style.cssText='display:flex;align-items:center;justify-content:center;gap:8px;min-height:110px;'+
+          'border:2px dashed #C94A3B;border-radius:8px;background:#FBEAE8;color:#B3261E;'+
+          'font-family:inherit;font-size:13px;font-weight:600;padding:16px;box-sizing:border-box;text-align:center;';
+        ph.textContent='\u26A0 Image failed to load: '+label;
+        if (img.parentNode) img.parentNode.replaceChild(ph, img);
+      });
+    }
+    var AXTROID_LOGO_URL='https://raw.githubusercontent.com/axtroid/support/main/axtroid-logo.png';
+    /* Callout icons are sized purely via a CSS rule scoped under
+       ".article-body"; if that class is lost on clone the rule stops
+       matching and the <svg> falls back to its huge native viewBox size.
+       Force an explicit inline size so it's correct no matter what. */
+    function fixSvgSizesForCapture(container){
+      container.querySelectorAll('svg').forEach(function(svg){
+        var inCallout = !!svg.closest('.rte-callout-icon');
+        var rect = svg.getBoundingClientRect();
+        var w = inCallout ? 18 : (rect.width>0 && rect.width<40 ? Math.round(rect.width) : 18);
+        var h = inCallout ? 18 : (rect.height>0 && rect.height<40 ? Math.round(rect.height) : 18);
+        svg.setAttribute('width',w); svg.setAttribute('height',h);
+        svg.style.width=w+'px'; svg.style.height=h+'px';
+        svg.style.display='inline-block'; svg.style.flexShrink='0';
+      });
+    }
+    var _pdfLogoImg=null;
+    function loadPdfLogo(){
+      if (_pdfLogoImg) return Promise.resolve(_pdfLogoImg);
+      return new Promise(function(resolve){
+        var img=new Image();
+        img.crossOrigin='anonymous';
+        img.onload=function(){ _pdfLogoImg=img; resolve(img); };
+        img.onerror=function(){ resolve(null); };
+        img.src=AXTROID_LOGO_URL;
+      });
+    }
+    function downloadTopicPdf(topicTitle, productName){
       var bodyEl=document.querySelector('.article-body');
       if (!bodyEl || !window.html2canvas || !window.jspdf){ window.print(); return; }
+      var bodyClone=bodyEl.cloneNode(true);
       var wrap=document.createElement('div');
       wrap.style.cssText='position:fixed;left:-9999px;top:0;background:#fff;width:760px;padding:40px;color:#201F23;';
-      wrap.innerHTML='<h1 style="font-size:26px;font-weight:700;margin:0 0 20px;">'+esc(topicTitle||'')+'</h1>'+bodyEl.innerHTML;
+      var titleEl=document.createElement('h1');
+      titleEl.style.cssText='font-size:26px;font-weight:700;margin:0 0 20px;color:#1C1B1F;';
+      titleEl.textContent=topicTitle||'';
+      wrap.appendChild(titleEl);
+      wrap.appendChild(bodyClone);
       document.body.appendChild(wrap);
-      window.html2canvas(wrap,{scale:3,useCORS:true,backgroundColor:'#ffffff'}).then(function(canvas){
+      fixSvgSizesForCapture(wrap);
+      var headings=Array.prototype.slice.call(bodyClone.querySelectorAll('h1, h2, h3')).map(function(h){
+        return { text:h.textContent||'', level: h.tagName==='H1'?1:(h.tagName==='H2'?2:3), top: h.getBoundingClientRect().top - wrap.getBoundingClientRect().top };
+      });
+      /* Real hyperlinks inside the body, captured before rasterizing (see
+         note in the editor's copy of this function for why). */
+      var wrapRectForLinks=wrap.getBoundingClientRect();
+      var links=Array.prototype.slice.call(bodyClone.querySelectorAll('a[href]')).filter(function(a){
+        var href=a.getAttribute('href')||'';
+        return href && href.charAt(0)!=='#' && !/^javascript:/i.test(href);
+      }).map(function(a){
+        var r=a.getBoundingClientRect();
+        return { href:a.href, top:r.top-wrapRectForLinks.top, left:r.left-wrapRectForLinks.left, width:r.width, height:r.height };
+      });
+      /* Images and callout boxes should never be sliced in half by a page
+         break — captured here so buildTopicPdf can nudge a page break
+         earlier to keep each one whole on a single page. */
+      var atomicBlocks=Array.prototype.slice.call(bodyClone.querySelectorAll('figure, .callout')).map(function(el){
+        var r=el.getBoundingClientRect();
+        return { top:r.top-wrapRectForLinks.top, height:r.height };
+      }).filter(function(b){ return b.height>0; });
+      Promise.all([waitForImages(wrap), loadPdfLogo()]).then(function(results){
+        var brokenImgs=results[0], logoImg=results[1];
+        if (brokenImgs.length) markBrokenImagesForCapture(brokenImgs);
+        var wrapCssHeight=wrap.scrollHeight;
+        var renderScale=Math.min(4,Math.max(3,(window.devicePixelRatio||1)*2));
+        return window.html2canvas(wrap,{scale:renderScale,useCORS:true,allowTaint:true,backgroundColor:'#ffffff',imageTimeout:15000})
+          .then(function(canvas){ return {canvas:canvas, logoImg:logoImg, wrapCssHeight:wrapCssHeight, brokenCount:brokenImgs.length}; });
+      }).then(function(r){
         document.body.removeChild(wrap);
-        var imgData=canvas.toDataURL('image/jpeg',0.98);
-        var jsPDF=window.jspdf.jsPDF;
-        var pdf=new jsPDF({unit:'pt',format:'a4'});
-        var pageW=pdf.internal.pageSize.getWidth(), pageH=pdf.internal.pageSize.getHeight();
-        var imgW=pageW, imgH=canvas.height*imgW/canvas.width;
-        var heightLeft=imgH, y=0;
-        pdf.addImage(imgData,'JPEG',0,y,imgW,imgH,'','FAST');
-        heightLeft-=pageH;
-        while (heightLeft>0){ y=heightLeft-imgH; pdf.addPage(); pdf.addImage(imgData,'JPEG',0,y,imgW,imgH,'','FAST'); heightLeft-=pageH; }
-        pdf.save(((topicTitle||'document').toLowerCase().replace(/[^a-z0-9]+/g,'-')||'document')+'.pdf');
+        buildTopicPdf(r.canvas, r.logoImg, topicTitle, productName, headings, r.wrapCssHeight, links, atomicBlocks);
+        if (r.brokenCount){
+          alert(r.brokenCount + ' image' + (r.brokenCount>1?'s':'') + ' could not be loaded and ' + (r.brokenCount>1?'are':'is') + ' marked in the exported PDF.');
+        }
       }).catch(function(e){
         console.error('PDF generation failed', e);
         if (document.body.contains(wrap)) document.body.removeChild(wrap);
         alert('PDF generation failed.');
       });
     }
+    /* Page breaks default to a fixed-height slice every contentH points,
+       but are nudged earlier whenever that slice would otherwise cut
+       straight through an image or callout box, so those always land
+       whole on one page (see the editor's copy of this function). */
+    function buildTopicPdf(canvas, logoImg, topicTitle, productName, headings, wrapCssHeight, links, atomicBlocks){
+      var jsPDF=window.jspdf.jsPDF;
+      var pdf=new jsPDF({unit:'pt',format:'a4',compress:true});
+      var pageW=pdf.internal.pageSize.getWidth(), pageH=pdf.internal.pageSize.getHeight();
+      var marginTop=56, marginBottom=34;
+      var contentH=pageH - marginTop - marginBottom;
+      var imgData=canvas.toDataURL('image/png');
+      var imgW=pageW, imgH=canvas.height*imgW/canvas.width;
+      var CAPTURE_WIDTH=760; // matches the fixed CSS width of the offscreen capture wrap
+      var scale = imgW / CAPTURE_WIDTH;
+
+      var atomicRanges=(atomicBlocks||[]).map(function(b){
+        return { top: b.top*scale, bottom: (b.top+b.height)*scale };
+      }).sort(function(a,b){ return a.top-b.top; });
+      var pageBreaksPt=[0];
+      (function(){
+        var y=0, guard=0;
+        while (y < imgH - 0.5 && guard < 2000){
+          guard++;
+          var candidate = y + contentH;
+          if (candidate >= imgH){ pageBreaksPt.push(imgH); return; }
+          for (var bi=0; bi<atomicRanges.length; bi++){
+            var rg=atomicRanges[bi];
+            if (rg.top < candidate && rg.bottom > candidate && rg.top > y+1){ candidate = rg.top; break; }
+          }
+          pageBreaksPt.push(candidate);
+          y = candidate;
+        }
+        if (pageBreaksPt[pageBreaksPt.length-1] < imgH) pageBreaksPt.push(imgH);
+      })();
+      var contentPageCount = pageBreaksPt.length - 1;
+      function pageIndexForY(yPt){
+        for (var i=0; i<contentPageCount; i++){ if (yPt < pageBreaksPt[i+1] || i===contentPageCount-1) return i; }
+        return contentPageCount-1;
+      }
+
+      function drawHeader(){
+        if (logoImg){
+          var lh=24, lw=lh*(logoImg.naturalWidth/logoImg.naturalHeight||3);
+          pdf.addImage(logoImg,'PNG',(pageW-lw)/2,14,lw,lh);
+        }
+        pdf.setDrawColor(230,162,59); pdf.setLineWidth(1.2);
+        pdf.line(40, marginTop-10, pageW-40, marginTop-10);
+      }
+      function drawFooter(pageNum, pageTotal){
+        pdf.setDrawColor(231,226,216); pdf.setLineWidth(0.75);
+        pdf.line(40, pageH-marginBottom+8, pageW-40, pageH-marginBottom+8);
+        pdf.setFont('helvetica','normal'); pdf.setFontSize(8.5);
+        pdf.setTextColor(110,106,102);
+        pdf.text(topicTitle||'', 40, pageH-marginBottom+22);
+        pdf.text('Page '+pageNum+' of '+pageTotal, pageW/2, pageH-marginBottom+22, {align:'center'});
+        pdf.text(productName||'', pageW-40, pageH-marginBottom+22, {align:'right'});
+        pdf.setTextColor(0,0,0);
+      }
+      var totalPages = 1 + contentPageCount;
+      var outline = (pdf.outline && typeof pdf.outline.add==='function') ? pdf.outline : null;
+      if (headings.length){
+        drawHeader();
+        pdf.setFont('helvetica','bold'); pdf.setFontSize(18); pdf.setTextColor(28,27,31);
+        pdf.text('Contents', 40, 90);
+        pdf.setFont('helvetica','normal'); pdf.setFontSize(11);
+        var y=122;
+        headings.forEach(function(h){
+          if (y > pageH-marginBottom-20) return;
+          var targetPage = 2 + pageIndexForY(h.top * scale);
+          var indent = 40 + (h.level-1)*16;
+          pdf.setTextColor(201,122,31);
+          pdf.textWithLink(h.text, indent, y, {pageNumber: targetPage});
+          if (outline){ try{ outline.add(null, h.text, {pageNumber: targetPage}); }catch(e){} }
+          y += 20;
+        });
+        pdf.setTextColor(0,0,0);
+        drawFooter(1, totalPages);
+      } else {
+        totalPages = contentPageCount;
+      }
+      for (var p=0; p<contentPageCount; p++){
+        pdf.addPage();
+        var yPos = marginTop - pageBreaksPt[p];
+        pdf.addImage(imgData,'PNG',0,yPos,imgW,imgH,'','FAST');
+        pdf.setFillColor(255,255,255);
+        pdf.rect(0,0,pageW,marginTop,'F');
+        pdf.rect(0,pageH-marginBottom,pageW,marginBottom,'F');
+        drawHeader();
+        drawFooter(headings.length ? p+2 : p+1, totalPages);
+      }
+      /* ---- Restore clickable hyperlinks over the rasterized image (see
+         note in the editor's copy of this function). ---- */
+      if (links && links.length){
+        links.forEach(function(l){
+          if (!l.width || !l.height) return;
+          var yTop=l.top*scale, yBottom=(l.top+l.height)*scale;
+          var xLeft=l.left*scale, wScaled=l.width*scale;
+          for (var pp=0; pp<contentPageCount; pp++){
+            var pStart=pageBreaksPt[pp], pEnd=pageBreaksPt[pp+1];
+            var segTop=Math.max(yTop, pStart), segBottom=Math.min(yBottom, pEnd);
+            var hSeg=segBottom-segTop;
+            if (hSeg<=0) continue;
+            var pageY=marginTop + (segTop - pStart);
+            var pageNum=headings.length ? pp+2 : pp+1;
+            pdf.setPage(pageNum);
+            pdf.link(xLeft, pageY, wScaled, hSeg, {url:l.href});
+          }
+        });
+      }
+      pdf.save(((topicTitle||'document').toLowerCase().replace(/[^a-z0-9]+/g,'-')||'document')+'.pdf');
+    }
     var PRINT_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>';
     function printMenuHtml(){
       return '<div class="print-menu" id="printMenu">'+
         '<button type="button" class="print-btn" id="printBtn" title="Print or save as PDF" aria-haspopup="true">'+PRINT_ICON_SVG+'</button>'+
         '<div class="print-dropdown" id="printDropdown">'+
-          '<button type="button" data-print-action="pdf">⬇ Save as PDF</button>'+
+          '<button type="button" data-print-action="pdf">⬇️ Save as PDF</button>'+
           '<button type="button" data-print-action="print">🖨 Print</button>'+
         '</div></div>';
     }
-    function bindPrintMenu(topicTitle){
+    function bindPrintMenu(topicTitle, productName){
       var menu=document.getElementById('printMenu'), btn=document.getElementById('printBtn');
       if (!menu || !btn) return;
       btn.addEventListener('click', function(e){ e.stopPropagation(); menu.classList.toggle('is-open'); });
       menu.querySelectorAll('[data-print-action]').forEach(function(b){
         b.addEventListener('click', function(){
           menu.classList.remove('is-open');
-          if (b.getAttribute('data-print-action')==='pdf'){ downloadTopicPdf(topicTitle); return; }
+          if (b.getAttribute('data-print-action')==='pdf'){ downloadTopicPdf(topicTitle, productName); return; }
           var prevTitle=document.title;
           document.title = topicTitle || prevTitle;
           var restored=false;
@@ -2937,9 +3478,9 @@ function exportRuntimeJs(){
       var wrap=document.getElementById('homeSearchWrap'), input=document.getElementById('homeSearch'), results=document.getElementById('homeSearchResults');
       if (!input) return;
       input.addEventListener('input',function(){
-        var q=input.value.trim().toLowerCase();
+        var q=input.value.trim();
         if(!q){wrap.classList.remove('has-results');return;}
-        var m=buildIdx().filter(function(e){return e.title.toLowerCase().indexOf(q)>-1||e.path.toLowerCase().indexOf(q)>-1;}).slice(0,15);
+        var m=wildFilter(buildIdx(),q).slice(0,15);
         results.innerHTML=m.length?m.map(function(e){return '<div class="search-result" data-goto="'+e.id+'"><div class="r-title">'+esc(e.title)+'</div><div class="r-path">'+esc(e.path)+'</div></div>';}).join(''):'<div class="search-result">No matches.</div>';
         wrap.classList.add('has-results');
         results.querySelectorAll('[data-goto]').forEach(function(el){el.addEventListener('click',function(){
@@ -2954,9 +3495,11 @@ function exportRuntimeJs(){
       var section=document.getElementById('topicSummarySection');
       if(section) section.style.display='none';
     }
+    var _topicSummaryScrollHandler=null;
     function renderTopicSummary(t){
       var section=document.getElementById('topicSummarySection'), list=document.getElementById('topicSummaryList');
       if(!section||!list) return;
+      if(_topicSummaryScrollHandler){window.removeEventListener('scroll',_topicSummaryScrollHandler);_topicSummaryScrollHandler=null;}
       var headings=(t.blocks||[]).filter(function(b){return b.type==='heading';});
       if(!headings.length){section.style.display='none';list.innerHTML='';return;}
       section.style.display='block';
@@ -2965,13 +3508,27 @@ function exportRuntimeJs(){
         var text=(b.text!=null?b.text:(b.html||'').replace(/<[^>]+>/g,'')).trim()||'Untitled section';
         return '<li'+(lvl>=3?' style="padding-left:16px;"':'')+'><a href="#blk-'+b.id+'" data-jump="'+b.id+'">'+esc(text)+'</a></li>';
       }).join('');
-      list.querySelectorAll('[data-jump]').forEach(function(el){
+      var links=list.querySelectorAll('[data-jump]');
+      links.forEach(function(el){
         el.addEventListener('click',function(e){
           e.preventDefault();
           var target=document.getElementById('blk-'+el.getAttribute('data-jump'));
           if(target){var y=target.getBoundingClientRect().top+window.pageYOffset-74;window.scrollTo({top:y,behavior:'smooth'});}
         });
       });
+      function updateActive(){
+        var activeId=null, bestTop=-Infinity;
+        headings.forEach(function(b){
+          var target=document.getElementById('blk-'+b.id); if(!target) return;
+          var top=target.getBoundingClientRect().top;
+          if (top-90<=0 && top>bestTop){ bestTop=top; activeId=b.id; }
+        });
+        if(!activeId && headings.length) activeId=headings[0].id;
+        links.forEach(function(el){ el.classList.toggle('is-active', el.getAttribute('data-jump')===activeId); });
+      }
+      _topicSummaryScrollHandler=function(){ window.requestAnimationFrame(updateActive); };
+      window.addEventListener('scroll',_topicSummaryScrollHandler,{passive:true});
+      updateActive();
     }
     function renderArticle(main){
       var t=getTopic(articleId); if(!t)return;
@@ -2993,7 +3550,7 @@ function exportRuntimeJs(){
           '</span>'+
         '</div>';
       document.getElementById('favToggleBtn').addEventListener('click',function(){toggleFav(t.id);renderArticle(main);});
-      bindPrintMenu(t.title);
+      bindPrintMenu(t.title, prod.name);
       bindTopicFeedback();
       renderTopicSummary(t);
     }
@@ -3014,12 +3571,37 @@ function exportRuntimeJs(){
         });
       });
     }
-    function buildIdx(){var idx=[];data.topics.forEach(function(t){var sec=getSection(t.sectionId);if(!sec)return;var prod=getProduct(sec.productId);if(!prod)return;idx.push({id:t.id,title:t.title,path:prod.name+' › '+sec.title});});return idx;}
+    function wildScore(query,target){
+      if(!query) return 0;
+      query=query.toLowerCase(); target=(target||'').toLowerCase();
+      var direct=target.indexOf(query);
+      if(direct>-1) return 1000-direct;
+      var ti=0,gap=0,matched=0;
+      for(var qi=0;qi<query.length;qi++){
+        var ch=query[qi],found=-1;
+        for(var j=ti;j<target.length;j++){ if(target[j]===ch){found=j;break;} }
+        if(found===-1) continue;
+        matched++; gap+=(found-ti); ti=found+1;
+      }
+      if(matched<Math.max(1,Math.ceil(query.length*0.6))) return -1;
+      return 200+matched*10-gap;
+    }
+    function buildIdx(){var idx=[];data.topics.forEach(function(t){var sec=getSection(t.sectionId);if(!sec)return;var prod=getProduct(sec.productId);if(!prod)return;var bodyText='';if(t._loaded&&t.blocks){bodyText=t.blocks.map(function(b){return b.text!=null?b.text:(b.html||'').replace(/<[^>]+>/g,' ');}).join(' ');}idx.push({id:t.id,title:t.title,path:prod.name+' › '+sec.title,body:bodyText});});return idx;}
+    function wildFilter(idx,q){
+      var out=[];
+      idx.forEach(function(e){
+        var sTitle=wildScore(q,e.title)*3, sPath=wildScore(q,e.path), sBody=e.body?wildScore(q,e.body):-1;
+        var best=Math.max(sTitle>0?sTitle:-1,sPath,sBody);
+        if(best>0) out.push({entry:e,score:best});
+      });
+      out.sort(function(a,b){return b.score-a.score;});
+      return out.map(function(o){return o.entry;});
+    }
     var wrap=document.getElementById('searchWrap'),input=document.getElementById('kbSearch'),results=document.getElementById('searchResults');
     input.addEventListener('input',function(){
-      var q=input.value.trim().toLowerCase();
+      var q=input.value.trim();
       if(!q){wrap.classList.remove('has-results');return;}
-      var m=buildIdx().filter(function(e){return e.title.toLowerCase().indexOf(q)>-1||e.path.toLowerCase().indexOf(q)>-1;}).slice(0,15);
+      var m=wildFilter(buildIdx(),q).slice(0,15);
       results.innerHTML=m.length?m.map(function(e){return '<div class="search-result" data-goto="'+e.id+'"><div class="r-title">'+esc(e.title)+'</div><div class="r-path">'+esc(e.path)+'</div></div>';}).join(''):'<div class="search-result">No matches.</div>';
       wrap.classList.add('has-results');
       results.querySelectorAll('[data-goto]').forEach(function(el){el.addEventListener('click',function(){
@@ -3037,6 +3619,55 @@ function exportRuntimeJs(){
       backdrop.addEventListener('click',function(){shell.classList.remove('sidebar-open');});
       document.getElementById('sidebar').addEventListener('click',function(e){
         if(e.target.closest('[data-select-topic]')&&window.matchMedia('(max-width:860px)').matches){shell.classList.remove('sidebar-open');}
+      });
+    })();
+    /* Stretchable + collapsible left (navigation) sidebar — same
+       collapse/resize behaviour as the editor, so the published site's
+       sidebar can be toggled and dragged too. */
+    (function(){
+      var shell=document.getElementById('kbShell'), sidebar=document.getElementById('sidebar'),
+          toggle=document.getElementById('sidebarToggle'), resizer=document.getElementById('sidebarResizer');
+      if (!shell || !sidebar || !toggle || !resizer) return;
+      var MIN_W=180, MAX_W=440;
+      var savedW=null;
+      try{ savedW=parseInt(localStorage.getItem('kb_sidebar_w'),10); }catch(e){}
+      if (savedW && savedW>=MIN_W && savedW<=MAX_W){ document.documentElement.style.setProperty('--sidebar-w', savedW+'px'); }
+      var collapsed=false;
+      try{ collapsed = localStorage.getItem('kb_sidebar_collapsed')==='1'; }catch(e){}
+      function applyCollapsed(){
+        shell.classList.toggle('sidebar-collapsed', collapsed);
+        toggle.textContent = collapsed?'›':'‹';
+        toggle.title = collapsed?'Expand sidebar':'Collapse sidebar';
+        toggle.setAttribute('aria-expanded', String(!collapsed));
+      }
+      applyCollapsed();
+      toggle.addEventListener('click', function(){
+        collapsed=!collapsed;
+        applyCollapsed();
+        try{ localStorage.setItem('kb_sidebar_collapsed', collapsed?'1':'0'); }catch(e){}
+      });
+      var dragging=false, startX=0, startW=0;
+      resizer.addEventListener('mousedown', function(e){
+        if (collapsed || window.matchMedia('(max-width:1180px)').matches) return;
+        dragging=true; startX=e.clientX; startW=sidebar.getBoundingClientRect().width;
+        resizer.classList.add('is-dragging');
+        document.body.style.userSelect='none';
+        e.preventDefault();
+      });
+      window.addEventListener('mousemove', function(e){
+        if (!dragging) return;
+        var w=Math.max(MIN_W, Math.min(MAX_W, startW + (e.clientX-startX)));
+        document.documentElement.style.setProperty('--sidebar-w', w+'px');
+      });
+      window.addEventListener('mouseup', function(){
+        if (!dragging) return;
+        dragging=false;
+        resizer.classList.remove('is-dragging');
+        document.body.style.userSelect='';
+        try{
+          var w=getComputedStyle(document.documentElement).getPropertyValue('--sidebar-w');
+          localStorage.setItem('kb_sidebar_w', parseInt(w,10));
+        }catch(e){}
       });
     })();
     (function(){
@@ -3082,30 +3713,19 @@ function exportRuntimeJs(){
         renderMain();
       });
     })();
-    /* ---------- Submit a Request (ticket) modal ---------- */
+    /* ---------- Submit a Request (ticket) modal ----------
+       Visitors of the published site are anonymous and the site is
+       public, so it must never ship a GitHub write-token in its JS —
+       anyone could read it via view-source and use it against the
+       whole repo. Instead the ticket payload is POSTed to a small
+       relay (Cloudflare Worker or similar) that holds the token
+       server-side and appends it to tickets.json on GitHub's behalf.
+       Reading tickets.json back (elsewhere, e.g. support-tickets.html)
+       stays a plain unauthenticated GitHub API call, since reads of a
+       public repo need no token at all — only the write does. */
     (function(){
-      var GH = window.__GH_CONFIG__ || {settings:{}, token:null};
-      function ghGetUrl(path){ return 'https://api.github.com/repos/'+GH.settings.owner+'/'+GH.settings.repo+'/contents/'+path+'?ref='+GH.settings.branch; }
-      function ghPutUrl(path){ return 'https://api.github.com/repos/'+GH.settings.owner+'/'+GH.settings.repo+'/contents/'+path; }
-      function ghHeaders(json){ var h={Authorization:'Bearer '+GH.token, Accept:'application/vnd.github+json'}; if(json) h['Content-Type']='application/json'; return h; }
-      function siblingPath(filename){ return (GH.settings.path||'').replace(/[^/]+$/,'') + filename; }
-      function ghGetFile(path){
-        return fetch(ghGetUrl(path),{headers:ghHeaders(false)}).then(function(r){
-          if (r.status===404) return null;
-          if (!r.ok) return r.json().catch(function(){return {};}).then(function(j){ throw new Error('GitHub read of "'+path+'" failed ('+r.status+'): '+(j.message||r.statusText)); });
-          return r.json();
-        });
-      }
-      function ghPutFile(path, contentString, message, sha){
-        var body={message:message, content:btoa(unescape(encodeURIComponent(contentString))), branch:GH.settings.branch};
-        if (sha) body.sha = sha;
-        return fetch(ghPutUrl(path),{method:'PUT',headers:ghHeaders(true),body:JSON.stringify(body)}).then(function(r){
-          return r.json().catch(function(){return {};}).then(function(j){
-            if (!r.ok) throw new Error('GitHub write to "'+path+'" failed ('+r.status+'): '+(j.message||r.statusText));
-            return j;
-          });
-        });
-      }
+      var GH = window.__GH_CONFIG__ || {settings:{}};
+      var RELAY = GH.settings.ticketsRelayUrl || '';
       function uid(prefix){ return prefix+'_'+Math.random().toString(36).slice(2,9); }
       function today(){ var d=new Date(); var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return d.getDate()+' '+months[d.getMonth()]+' '+d.getFullYear(); }
       function ticketProductOptions(){ return data.products.map(function(p){return '<option value="'+p.id+'">'+esc(p.name)+'</option>';}).join(''); }
@@ -3142,12 +3762,17 @@ function exportRuntimeJs(){
         this.value='';
       });
       function persistTicket(ticket){
-        var path = siblingPath('tickets.json');
-        return ghGetFile(path).then(function(existing){
-          var list=[];
-          if (existing && existing.content){ try{ list=JSON.parse(decodeURIComponent(escape(atob(existing.content.replace(/\n/g,''))))); }catch(e){ list=[]; } }
-          list.push(ticket);
-          return ghPutFile(path, JSON.stringify(list,null,2), 'New support ticket', existing?existing.sha:null);
+        if (!RELAY){
+          console.warn('No tickets relay URL configured — keeping ticket on this device only. Set one in ⚙ GitHub Settings.');
+          try{ var p=JSON.parse(localStorage.getItem('kb_pending_tickets')||'[]'); p.push(ticket); localStorage.setItem('kb_pending_tickets', JSON.stringify(p)); }catch(e2){}
+          return Promise.resolve();
+        }
+        return fetch(RELAY+'/submit-ticket', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ owner:GH.settings.owner, repo:GH.settings.repo, branch:GH.settings.branch, path:GH.settings.path, ticket:ticket })
+        }).then(function(r){
+          if (!r.ok) return r.json().catch(function(){return {};}).then(function(j){ throw new Error(j.error||('relay failed ('+r.status+')')); });
+          return r.json();
         }).catch(function(e){
           console.error('Ticket sync failed, keeping locally', e);
           try{ var pending=JSON.parse(localStorage.getItem('kb_pending_tickets')||'[]'); pending.push(ticket); localStorage.setItem('kb_pending_tickets', JSON.stringify(pending)); }catch(e2){}
