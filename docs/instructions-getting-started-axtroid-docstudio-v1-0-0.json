@@ -3,7 +3,54 @@
     {
       "id": "blk_kbb2pqn",
       "type": "paragraph",
-      "text": "Welcome"
+      "text": "This is documentation authoring platform for Axtroid Documentation Portal www.axtroid.com/documentation."
+    },
+    {
+      "id": "blk_ot4z66p",
+      "type": "heading",
+      "level": 3,
+      "text": "Prerequisites"
+    },
+    {
+      "id": "blk_sl6bd23",
+      "type": "paragraph",
+      "text": "Always make sure you have necessary access to work on DocStudio."
+    },
+    {
+      "id": "blk_d63ik4p",
+      "type": "callout",
+      "calloutType": "important",
+      "text": "Before you start using DocStudio, user must download the stand-alone app."
+    },
+    {
+      "id": "blk_qobs17x",
+      "type": "list",
+      "ordered": false,
+      "items": [
+        "Once the app is downloaded on to the desktop, click to open the app.",
+        "Make sure you see instructions page.",
+        "Follow the instructions to set the real-time authoring-environment.",
+        "Click ⚙️Settings icon on the top left.",
+        "Fill the details as shown below then click Save Settings."
+      ]
+    },
+    {
+      "id": "blk_svxes5g",
+      "type": "list",
+      "ordered": true,
+      "items": [
+        "Owner: axtroid",
+        "Repo: documentation",
+        "Path: docs/index.html (obtain it from your admin)",
+        "Branch: main",
+        "Personal access token: (obtain it from you admin)"
+      ]
+    },
+    {
+      "id": "blk_j7ctnuu",
+      "type": "callout",
+      "calloutType": "tip",
+      "text": "The application must be restarted to load the latest content from the server."
     }
   ]
 }
