@@ -31,6 +31,29 @@
       "product": "Instructions",
       "text": "\"Axtroid DocStudio v1.0.0\" updated",
       "details": [
+        "heading added: \"Prerequisites\"",
+        "paragraph added: \"Always make sure you have necessary access to work on DocStudio.\"",
+        "callout added: \"Before you start using DocStudio, user must download the stand-alone app.\"",
+        "list added: \"Once the app is downloaded on to the desktop, click to open the app. | Make sure…\"",
+        "list added: \"Owner: axtroid | Repo: documentation | Path: docs/index.html (obtain it from you…\"",
+        "callout added: \"The application must be restarted to load the latest content from the server.\""
+      ]
+    },
+    {
+      "date": "28 Jul 2026",
+      "tag": "updated",
+      "product": "Instructions",
+      "text": "\"Axtroid DocStudio v1.0.0\" updated",
+      "details": [
+        "paragraph edited: \"Welcome\" → \"This is documentation authoring platform for Axtroid Documen…\""
+      ]
+    },
+    {
+      "date": "28 Jul 2026",
+      "tag": "updated",
+      "product": "Instructions",
+      "text": "\"Axtroid DocStudio v1.0.0\" updated",
+      "details": [
         "paragraph added: \"Welcome\""
       ]
     },
