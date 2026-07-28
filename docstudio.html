@@ -2397,11 +2397,12 @@ function supportTicketsRuntimeJs(){
   return '(' + function(){
     var GH = window.__GH_CONFIG__ || {settings:{}, token:null};
     function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
-    function ghUrl(path){ return 'https://api.github.com/repos/'+GH.settings.owner+'/'+GH.settings.repo+'/contents/'+path+'?ref='+GH.settings.branch; }
+    function ghGetUrl(path){ return 'https://api.github.com/repos/'+GH.settings.owner+'/'+GH.settings.repo+'/contents/'+path+'?ref='+GH.settings.branch; }
+    function ghPutUrl(path){ return 'https://api.github.com/repos/'+GH.settings.owner+'/'+GH.settings.repo+'/contents/'+path; }
     function ghHeaders(json){ var h={Authorization:'Bearer '+GH.token, Accept:'application/vnd.github+json'}; if(json) h['Content-Type']='application/json'; return h; }
     function siblingPath(filename){ return (GH.settings.path||'').replace(/[^/]+$/,'') + filename; }
     function ghGetFile(path){
-      return fetch(ghUrl(path),{headers:ghHeaders(false)}).then(function(r){
+      return fetch(ghGetUrl(path),{headers:ghHeaders(false)}).then(function(r){
         if (r.status===404) return null;
         if (!r.ok) return r.json().catch(function(){return {};}).then(function(j){ throw new Error('GitHub read of "'+path+'" failed ('+r.status+'): '+(j.message||r.statusText)); });
         return r.json();
@@ -2410,7 +2411,7 @@ function supportTicketsRuntimeJs(){
     function ghPutFile(path, contentString, message, sha){
       var body={message:message, content:btoa(unescape(encodeURIComponent(contentString))), branch:GH.settings.branch};
       if (sha) body.sha = sha;
-      return fetch(ghUrl(path),{method:'PUT',headers:ghHeaders(true),body:JSON.stringify(body)}).then(function(r){
+      return fetch(ghPutUrl(path),{method:'PUT',headers:ghHeaders(true),body:JSON.stringify(body)}).then(function(r){
         return r.json().catch(function(){return {};}).then(function(j){
           if (!r.ok) throw new Error('GitHub write to "'+path+'" failed ('+r.status+'): '+(j.message||r.statusText));
           return j;
@@ -3084,11 +3085,12 @@ function exportRuntimeJs(){
     /* ---------- Submit a Request (ticket) modal ---------- */
     (function(){
       var GH = window.__GH_CONFIG__ || {settings:{}, token:null};
-      function ghUrl(path){ return 'https://api.github.com/repos/'+GH.settings.owner+'/'+GH.settings.repo+'/contents/'+path+'?ref='+GH.settings.branch; }
+      function ghGetUrl(path){ return 'https://api.github.com/repos/'+GH.settings.owner+'/'+GH.settings.repo+'/contents/'+path+'?ref='+GH.settings.branch; }
+      function ghPutUrl(path){ return 'https://api.github.com/repos/'+GH.settings.owner+'/'+GH.settings.repo+'/contents/'+path; }
       function ghHeaders(json){ var h={Authorization:'Bearer '+GH.token, Accept:'application/vnd.github+json'}; if(json) h['Content-Type']='application/json'; return h; }
       function siblingPath(filename){ return (GH.settings.path||'').replace(/[^/]+$/,'') + filename; }
       function ghGetFile(path){
-        return fetch(ghUrl(path),{headers:ghHeaders(false)}).then(function(r){
+        return fetch(ghGetUrl(path),{headers:ghHeaders(false)}).then(function(r){
           if (r.status===404) return null;
           if (!r.ok) return r.json().catch(function(){return {};}).then(function(j){ throw new Error('GitHub read of "'+path+'" failed ('+r.status+'): '+(j.message||r.statusText)); });
           return r.json();
@@ -3097,7 +3099,7 @@ function exportRuntimeJs(){
       function ghPutFile(path, contentString, message, sha){
         var body={message:message, content:btoa(unescape(encodeURIComponent(contentString))), branch:GH.settings.branch};
         if (sha) body.sha = sha;
-        return fetch(ghUrl(path),{method:'PUT',headers:ghHeaders(true),body:JSON.stringify(body)}).then(function(r){
+        return fetch(ghPutUrl(path),{method:'PUT',headers:ghHeaders(true),body:JSON.stringify(body)}).then(function(r){
           return r.json().catch(function(){return {};}).then(function(j){
             if (!r.ok) throw new Error('GitHub write to "'+path+'" failed ('+r.status+'): '+(j.message||r.statusText));
             return j;
@@ -3173,13 +3175,23 @@ function exportRuntimeJs(){
 /* ============================================================
    GITHUB HELPERS — shared by publish, revert, and ticket sync.
    ============================================================ */
-function ghUrl(path){
+/* GET URL: includes ?ref=branch so GitHub returns the correct branch content */
+function ghGetUrl(path){
   var settings = GITHUB_SETTINGS;
-  return `https://api.github.com/repos/${settings.owner}/${settings.repo}/contents/${path}?ref=${settings.branch}`;
+  return 'https://api.github.com/repos/'+settings.owner+'/'+settings.repo+'/contents/'+path+'?ref='+settings.branch;
+}
+/* PUT URL: branch goes in the request BODY, NOT the URL — adding ?ref= to a
+   PUT confuses the GitHub Contents API and causes it to reject the sha field,
+   producing the "sha not supplied" 422 error. */
+function ghPutUrl(path){
+  var settings = GITHUB_SETTINGS;
+  return 'https://api.github.com/repos/'+settings.owner+'/'+settings.repo+'/contents/'+path;
 }
 function ghHeaders(json){
-  var h = { Authorization:`Bearer ${GITHUB_TOKEN}`, Accept:"application/vnd.github+json" };
-  if (json) h["Content-Type"] = "application/json";
+  var tok = GITHUB_TOKEN;
+  if (!tok || tok === 'null') throw new Error('GitHub token is missing — open the ⚙ Settings modal and enter your Personal Access Token.');
+  var h = { Authorization: 'Bearer ' + tok, Accept: 'application/vnd.github+json' };
+  if (json) h['Content-Type'] = 'application/json';
   return h;
 }
 /* Sibling path helper: swaps the filename of settings.path for another file
@@ -3189,7 +3201,7 @@ function siblingPath(filename){
   return base + filename;
 }
 async function ghGetFile(path){
-  var res = await fetch(ghUrl(path), { headers: ghHeaders(false) });
+  var res = await fetch(ghGetUrl(path), { headers: ghHeaders(false) });
   if (res.status === 404) return null;
   if (!res.ok){
     var errBody = await res.json().catch(function(){ return {}; });
@@ -3201,7 +3213,7 @@ async function ghPutFile(path, contentString, message, shaOrNull){
   var base64 = btoa(unescape(encodeURIComponent(contentString)));
   var body = { message: message, content: base64, branch: GITHUB_SETTINGS.branch };
   if (shaOrNull) body.sha = shaOrNull;
-  var res = await fetch(ghUrl(path), { method:"PUT", headers: ghHeaders(true), body: JSON.stringify(body) });
+  var res = await fetch(ghPutUrl(path), { method: 'PUT', headers: ghHeaders(true), body: JSON.stringify(body) });
   var json = await res.json().catch(function(){ return {}; });
   if (!res.ok){
     throw new Error('GitHub write to "'+path+'" failed ('+res.status+'): '+(json.message||res.statusText));
