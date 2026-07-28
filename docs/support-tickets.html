@@ -101,6 +101,9 @@
   .fav-text{display:flex;flex-direction:column;min-width:0;}
   .fav-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .fav-product{font-size:.7rem;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  /* "What You Will Find" quick-nav — bold + accent-highlighted while its section is in view */
+  #topicSummaryList li a{transition:color .12s,background .12s;}
+  #topicSummaryList li a.is-active{background:#F1ECE1;color:var(--accent-dark);font-weight:700;}
 
   /* main */
   .main{grid-area:main;padding:36px 48px 80px;max-width:820px;}
