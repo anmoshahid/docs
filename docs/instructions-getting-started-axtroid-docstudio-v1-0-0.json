@@ -1,0 +1,9 @@
+{
+  "blocks": [
+    {
+      "id": "blk_jal1lpr",
+      "type": "text",
+      "html": "<p>This is documentation authoring platform for Axtroid Documentation Portal www.axtroid.com/documentation.</p><p>Prerequisites</p><p>Always make sure you have necessary access to work on DocStudio.</p><p>Before you start using DocStudio, user must download the stand-alone app.Once the app is downloaded on to the desktop, click to open the app.</p><p>Make sure you see instructions page.</p><p>Follow the instructions to set the real-time authoring-environment.</p><p>Click ⚙️Settings icon on the top left.</p><p>Fill the details as shown below then click Save Settings.Owner: axtroid</p><p>Repo: documentation</p><p>Path: docs/index.html (obtain it from your admin)</p><p>Branch: main</p><p>Personal access token: (obtain it from you admin)The application must be restarted to load the latest content from the server.</p>"
+    }
+  ]
+}
