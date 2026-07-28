@@ -2,55 +2,8 @@
   "blocks": [
     {
       "id": "blk_kbb2pqn",
-      "type": "paragraph",
-      "text": "This is documentation authoring platform for Axtroid Documentation Portal www.axtroid.com/documentation."
-    },
-    {
-      "id": "blk_ot4z66p",
-      "type": "heading",
-      "level": 3,
-      "text": "Prerequisites"
-    },
-    {
-      "id": "blk_sl6bd23",
-      "type": "paragraph",
-      "text": "Always make sure you have necessary access to work on DocStudio."
-    },
-    {
-      "id": "blk_d63ik4p",
-      "type": "callout",
-      "calloutType": "important",
-      "text": "Before you start using DocStudio, user must download the stand-alone app."
-    },
-    {
-      "id": "blk_qobs17x",
-      "type": "list",
-      "ordered": false,
-      "items": [
-        "Once the app is downloaded on to the desktop, click to open the app.",
-        "Make sure you see instructions page.",
-        "Follow the instructions to set the real-time authoring-environment.",
-        "Click ⚙️Settings icon on the top left.",
-        "Fill the details as shown below then click Save Settings."
-      ]
-    },
-    {
-      "id": "blk_svxes5g",
-      "type": "list",
-      "ordered": true,
-      "items": [
-        "Owner: axtroid",
-        "Repo: documentation",
-        "Path: docs/index.html (obtain it from your admin)",
-        "Branch: main",
-        "Personal access token: (obtain it from you admin)"
-      ]
-    },
-    {
-      "id": "blk_j7ctnuu",
-      "type": "callout",
-      "calloutType": "tip",
-      "text": "The application must be restarted to load the latest content from the server."
+      "type": "text",
+      "html": "<p>This is documentation authoring platform for Axtroid Documentation Portal www.axtroid.com/documentation.</p><h3>Prerequisites</h3><div>Always make sure you have necessary access to work on DocStudio.</div><div><div class=\"rte-callout rte-callout-important\"><span class=\"rte-callout-icon\" contenteditable=\"false\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M5 3v18\"></path><path d=\"M5 4h11l-2 4 2 4H5\"></path></svg></span><div class=\"rte-callout-inner\"><span class=\"rte-callout-title\">Important&nbsp;<span style=\"font-size: 0.92rem;\">- </span><span style=\"font-weight: normal;\"><span style=\"font-size: 0.92rem; color: rgb(32, 31, 35);\">Download </span><a class=\"rte-ext-link\" href=\"https://www.axtroid.com/docstudio\" target=\"_blank\" rel=\"noopener\" style=\"font-size: 0.92rem;\">DocStudio ↗</a><span style=\"font-size: 0.92rem; color: rgb(32, 31, 35);\"> application, before you to start adding content.</span></span></span></div></div><p></p><ol><li>Once the app is downloaded on to the desktop, click to open the app.</li><li><span style=\"font-size: 15.2px;\">Make sure you see instructions page.</span></li><li><span style=\"font-size: 15.2px;\">Follow the instructions to set the real-time authoring-environment.</span></li><li><span style=\"font-size: 15.2px;\">Click ⚙️ icon on the top left, to open <b>GitHub Settings</b>.</span></li><li>Fill the details as shown below then click <b>Connect</b>.</li><ol><li><span style=\"font-size: 15.2px;\">Owner: axtroid</span></li><li><span style=\"font-size: 15.2px;\">Repo: documentation</span></li><li><span style=\"font-size: 15.2px;\">Path: docs/index.html <i>(obtain it from your admin)</i></span></li><li><span style=\"font-size: 15.2px;\">Branch: main</span></li><li><span style=\"font-size: 15.2px;\">Personal access token: <i>(obtain it from you admin)</i></span></li></ol></ol><div><div class=\"rte-callout rte-callout-tip\"><span class=\"rte-callout-icon\" contenteditable=\"false\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M9 18h6\"></path><path d=\"M12 2a6 6 0 00-3.5 10.9c.6.5 1 1.3 1 2.1h5c0-.8.4-1.6 1-2.1A6 6 0 0012 2z\"></path></svg></span><div class=\"rte-callout-inner\"><span class=\"rte-callout-title\">Tip <span style=\"font-size: 0.92rem; color: rgb(32, 31, 35); font-weight: normal;\">- Restart the application to load the latest content from the server.</span></span></div></div></div><p></p></div>"
     }
   ]
 }
