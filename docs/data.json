@@ -31,6 +31,15 @@
       "product": "Instructions",
       "text": "\"Axtroid DocStudio v1.0.0\" updated",
       "details": [
+        "callout removed: \"The application must be restarted to load the latest content from the server.\""
+      ]
+    },
+    {
+      "date": "28 Jul 2026",
+      "tag": "updated",
+      "product": "Instructions",
+      "text": "\"Axtroid DocStudio v1.0.0\" updated",
+      "details": [
         "No visible content change."
       ]
     },
