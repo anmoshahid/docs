@@ -2,8 +2,8 @@
   "products": [
     {
       "id": "prod_7y9y0h1",
-      "name": "Instructions",
-      "category": "General"
+      "name": "Akaar E1",
+      "category": "3D Printers"
     }
   ],
   "sections": [
@@ -12,19 +12,443 @@
       "productId": "prod_7y9y0h1",
       "title": "Getting Started",
       "order": 0
+    },
+    {
+      "id": "sec_lznanj6",
+      "productId": "prod_7y9y0h1",
+      "title": "Manuals",
+      "order": 1
+    },
+    {
+      "id": "sec_izaiznn",
+      "productId": "prod_7y9y0h1",
+      "title": "Configuration",
+      "order": 2
+    },
+    {
+      "id": "sec_csiyavb",
+      "productId": "prod_7y9y0h1",
+      "title": "Troubleshooting",
+      "order": 3
+    },
+    {
+      "id": "sec_n1v7n5k",
+      "productId": "prod_7y9y0h1",
+      "title": "Service Manuals",
+      "order": 4
     }
   ],
   "topics": [
     {
       "id": "top_12f88pi",
       "sectionId": "sec_d1bkstr",
-      "title": "Axtroid DocStudio v1.0.0",
+      "title": "Quick Start Guide",
       "order": 0,
       "updated": "28 Jul 2026",
       "file": "instructions-getting-started-axtroid-docstudio-v1-0-0.json"
+    },
+    {
+      "id": "top_dfba329",
+      "sectionId": "sec_d1bkstr",
+      "title": "Technical Requirements",
+      "order": 1,
+      "updated": "28 Jul 2026",
+      "file": "akaar-e1-getting-started-technical-requirements.json"
+    },
+    {
+      "id": "top_1gnqpw8",
+      "sectionId": "sec_d1bkstr",
+      "title": "System Requirements",
+      "order": 2,
+      "updated": "28 Jul 2026",
+      "file": "akaar-e1-getting-started-system-requirements.json"
+    },
+    {
+      "id": "top_s4up7m1",
+      "sectionId": "sec_lznanj6",
+      "title": "User Manuals",
+      "order": 0,
+      "updated": "28 Jul 2026",
+      "file": "akaar-e1-manuals-user-manuals.json"
+    },
+    {
+      "id": "top_tv819af",
+      "sectionId": "sec_lznanj6",
+      "title": "Installation Guide",
+      "order": 1,
+      "updated": "28 Jul 2026",
+      "file": "akaar-e1-manuals-installation-guide.json"
+    },
+    {
+      "id": "top_w3kwb2j",
+      "sectionId": "sec_izaiznn",
+      "title": "Build Calibration",
+      "order": 0,
+      "updated": "28 Jul 2026",
+      "file": "akaar-e1-configuration-build-calibration.json"
+    },
+    {
+      "id": "top_cltsfy6",
+      "sectionId": "sec_izaiznn",
+      "title": "Firmware Update",
+      "order": 1,
+      "updated": "28 Jul 2026",
+      "file": "akaar-e1-configuration-firmware-update.json"
+    },
+    {
+      "id": "top_nd2z53j",
+      "sectionId": "sec_izaiznn",
+      "title": "Change Filament",
+      "order": 2,
+      "updated": "28 Jul 2026",
+      "file": "akaar-e1-configuration-change-filament.json"
+    },
+    {
+      "id": "top_m90ll3p",
+      "sectionId": "sec_izaiznn",
+      "title": "Replace Nozzle",
+      "order": 3,
+      "updated": "28 Jul 2026",
+      "file": "akaar-e1-configuration-replace-nozzle.json"
+    },
+    {
+      "id": "top_fizae9w",
+      "sectionId": "sec_izaiznn",
+      "title": "PEI Sheet Replacement",
+      "order": 4,
+      "updated": "28 Jul 2026",
+      "file": "akaar-e1-configuration-pei-sheet-replacement.json"
+    },
+    {
+      "id": "top_ljq8v1l",
+      "sectionId": "sec_csiyavb",
+      "title": "WiFi not working",
+      "order": 0,
+      "updated": "28 Jul 2026",
+      "file": "akaar-e1-troubleshooting-wifi-not-working.json"
+    },
+    {
+      "id": "top_r5wbjy4",
+      "sectionId": "sec_csiyavb",
+      "title": "CAD models not loading",
+      "order": 1,
+      "updated": "28 Jul 2026",
+      "file": "akaar-e1-troubleshooting-cad-models-not-loading.json"
+    },
+    {
+      "id": "top_dnhrhwb",
+      "sectionId": "sec_csiyavb",
+      "title": "Screen not working",
+      "order": 2,
+      "updated": "28 Jul 2026",
+      "file": "akaar-e1-troubleshooting-screen-not-working.json"
+    },
+    {
+      "id": "top_gx5v99x",
+      "sectionId": "sec_csiyavb",
+      "title": "Calibration error",
+      "order": 3,
+      "updated": "28 Jul 2026",
+      "file": "akaar-e1-troubleshooting-calibration-error.json"
+    },
+    {
+      "id": "top_gfa3ycc",
+      "sectionId": "sec_izaiznn",
+      "title": "Purging",
+      "order": 5,
+      "updated": "28 Jul 2026",
+      "file": "akaar-e1-configuration-purging.json"
+    },
+    {
+      "id": "top_46vfu5y",
+      "sectionId": "sec_izaiznn",
+      "title": "Build via Orca Splicer",
+      "order": 6,
+      "updated": "28 Jul 2026",
+      "file": "akaar-e1-configuration-build-via-orca-splicer.json"
+    },
+    {
+      "id": "top_gif7d5y",
+      "sectionId": "sec_n1v7n5k",
+      "title": "Nozzle",
+      "order": 0,
+      "updated": "28 Jul 2026",
+      "file": "akaar-e1-service-manuals-nozzle.json"
+    },
+    {
+      "id": "top_ulwptyp",
+      "sectionId": "sec_n1v7n5k",
+      "title": "Extruder",
+      "order": 1,
+      "updated": "28 Jul 2026",
+      "file": "akaar-e1-service-manuals-extruder.json"
+    },
+    {
+      "id": "top_sn3w7w1",
+      "sectionId": "sec_n1v7n5k",
+      "title": "Z-axis screw",
+      "order": 2,
+      "updated": "28 Jul 2026",
+      "file": "akaar-e1-service-manuals-z-axis-screw.json"
+    },
+    {
+      "id": "top_585b745",
+      "sectionId": "sec_n1v7n5k",
+      "title": "Stepper Motor",
+      "order": 3,
+      "updated": "28 Jul 2026",
+      "file": "akaar-e1-service-manuals-stepper-motor.json"
+    },
+    {
+      "id": "top_6yzid2z",
+      "sectionId": "sec_n1v7n5k",
+      "title": "Z-axis motor",
+      "order": 4,
+      "updated": "28 Jul 2026",
+      "file": "akaar-e1-service-manuals-z-axis-motor.json"
+    },
+    {
+      "id": "top_m82pg58",
+      "sectionId": "sec_izaiznn",
+      "title": "Camera",
+      "order": 7,
+      "updated": "28 Jul 2026",
+      "file": "akaar-e1-configuration-camera.json"
+    },
+    {
+      "id": "top_pkupuc1",
+      "sectionId": "sec_n1v7n5k",
+      "title": "Filter",
+      "order": 5,
+      "updated": "28 Jul 2026",
+      "file": "akaar-e1-service-manuals-filter.json"
+    },
+    {
+      "id": "top_v4epmtq",
+      "sectionId": "sec_n1v7n5k",
+      "title": "Fan",
+      "order": 6,
+      "updated": "28 Jul 2026",
+      "file": "akaar-e1-service-manuals-fan.json"
     }
   ],
   "changelog": [
+    {
+      "date": "28 Jul 2026",
+      "tag": "updated",
+      "product": "Akaar E1",
+      "text": "\"Quick Start Guide\" updated",
+      "details": [
+        "No visible content change."
+      ]
+    },
+    {
+      "date": "28 Jul 2026",
+      "tag": "added",
+      "product": "Akaar E1",
+      "text": "Fan",
+      "details": [
+        "Fan"
+      ]
+    },
+    {
+      "date": "28 Jul 2026",
+      "tag": "added",
+      "product": "Akaar E1",
+      "text": "Filter",
+      "details": [
+        "Filter"
+      ]
+    },
+    {
+      "date": "28 Jul 2026",
+      "tag": "added",
+      "product": "Akaar E1",
+      "text": "Camera",
+      "details": [
+        "Camera"
+      ]
+    },
+    {
+      "date": "28 Jul 2026",
+      "tag": "added",
+      "product": "Akaar E1",
+      "text": "Z-axis motor",
+      "details": [
+        "Z-axis motor"
+      ]
+    },
+    {
+      "date": "28 Jul 2026",
+      "tag": "added",
+      "product": "Akaar E1",
+      "text": "Stepper Motor",
+      "details": [
+        "Stepper Motor"
+      ]
+    },
+    {
+      "date": "28 Jul 2026",
+      "tag": "added",
+      "product": "Akaar E1",
+      "text": "Z-axis screw",
+      "details": [
+        "Z-axis screw"
+      ]
+    },
+    {
+      "date": "28 Jul 2026",
+      "tag": "added",
+      "product": "Akaar E1",
+      "text": "Extruder",
+      "details": [
+        "Extruder"
+      ]
+    },
+    {
+      "date": "28 Jul 2026",
+      "tag": "added",
+      "product": "Akaar E1",
+      "text": "Nozzle",
+      "details": [
+        "Nozzle"
+      ]
+    },
+    {
+      "date": "28 Jul 2026",
+      "tag": "added",
+      "product": "Akaar E1",
+      "text": "Build via Orca Splicer",
+      "details": [
+        "Build via Orca Splicer"
+      ]
+    },
+    {
+      "date": "28 Jul 2026",
+      "tag": "added",
+      "product": "Akaar E1",
+      "text": "Purging",
+      "details": [
+        "Purging"
+      ]
+    },
+    {
+      "date": "28 Jul 2026",
+      "tag": "added",
+      "product": "Akaar E1",
+      "text": "Calibration error",
+      "details": [
+        "Calibration error"
+      ]
+    },
+    {
+      "date": "28 Jul 2026",
+      "tag": "added",
+      "product": "Akaar E1",
+      "text": "Screen not working",
+      "details": [
+        "Screen not working"
+      ]
+    },
+    {
+      "date": "28 Jul 2026",
+      "tag": "added",
+      "product": "Akaar E1",
+      "text": "CAD models not loading",
+      "details": [
+        "CAD models not loading"
+      ]
+    },
+    {
+      "date": "28 Jul 2026",
+      "tag": "added",
+      "product": "Akaar E1",
+      "text": "WiFi not working",
+      "details": [
+        "WiFi not working"
+      ]
+    },
+    {
+      "date": "28 Jul 2026",
+      "tag": "added",
+      "product": "Akaar E1",
+      "text": "PEI Sheet Replacement",
+      "details": [
+        "PEI Sheet Replacement"
+      ]
+    },
+    {
+      "date": "28 Jul 2026",
+      "tag": "added",
+      "product": "Akaar E1",
+      "text": "Replace Nozzle",
+      "details": [
+        "Replace Nozzle"
+      ]
+    },
+    {
+      "date": "28 Jul 2026",
+      "tag": "added",
+      "product": "Akaar E1",
+      "text": "Change Filament",
+      "details": [
+        "Change Filament"
+      ]
+    },
+    {
+      "date": "28 Jul 2026",
+      "tag": "added",
+      "product": "Akaar E1",
+      "text": "Firmware Update",
+      "details": [
+        "Firmware Update"
+      ]
+    },
+    {
+      "date": "28 Jul 2026",
+      "tag": "added",
+      "product": "Akaar E1",
+      "text": "Build Calibration",
+      "details": [
+        "Build Calibration"
+      ]
+    },
+    {
+      "date": "28 Jul 2026",
+      "tag": "added",
+      "product": "Akaar E1",
+      "text": "Installation Guide",
+      "details": [
+        "Installation Guide"
+      ]
+    },
+    {
+      "date": "28 Jul 2026",
+      "tag": "added",
+      "product": "Akaar E1",
+      "text": "User Manuals",
+      "details": [
+        "User Manuals"
+      ]
+    },
+    {
+      "date": "28 Jul 2026",
+      "tag": "added",
+      "product": "Akaar E1",
+      "text": "System Requirements",
+      "details": [
+        "System Requirements"
+      ]
+    },
+    {
+      "date": "28 Jul 2026",
+      "tag": "added",
+      "product": "Akaar E1",
+      "text": "Technical Requirements",
+      "details": [
+        "Technical Requirements"
+      ]
+    },
     {
       "date": "28 Jul 2026",
       "tag": "updated",
