@@ -391,32 +391,45 @@
   @keyframes preloaderFade{0%,100%{opacity:.45;}50%{opacity:1;}}
 
 
-.tickets-wrap{max-width:900px;margin:0 auto;padding:36px 24px 80px;}.tickets-topbar{display:flex;align-items:center;gap:12px;padding:0 24px;height:62px;background:var(--ink);}.ticket-card{border:1px solid var(--paper-line);border-radius:var(--radius);background:var(--paper-raised);margin-bottom:16px;overflow:hidden;}.ticket-card-head{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:12px 16px;background:#F3EFE6;font-size:.8rem;color:var(--text-muted);}.ticket-card-head strong{color:var(--ink);}.ticket-status{margin-left:auto;font-size:.66rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:3px 10px;border-radius:999px;}.ticket-status.open{background:#FBE9E7;color:#B3261E;} .ticket-status.in-progress{background:#FBF1E1;color:var(--accent-dark);} .ticket-status.resolved{background:#E5F2E3;color:#2F7A34;}.ticket-card-body{padding:16px;font-size:.9rem;line-height:1.6;}.ticket-card-body img{max-width:100%;border-radius:6px;margin:6px 0;display:block;}.ticket-meta-row{font-size:.78rem;color:var(--text-muted);margin-top:10px;}.ticket-actions{display:flex;gap:8px;padding:0 16px 16px;}.ticket-actions button{border:1px solid var(--paper-line);background:#fff;border-radius:999px;padding:6px 14px;font-size:.78rem;cursor:pointer;}.ticket-actions button:hover{border-color:var(--accent);color:var(--accent-dark);}.ticket-actions button.is-current{background:var(--ink);color:#fff;border-color:var(--ink);}</style></head><body style="background:var(--paper);"><header class="tickets-topbar"><div class="brand"><img class="brand-logo" src="https://raw.githubusercontent.com/axtroid/support/main/logo-axtroid.png" alt="Axtroid"><img class="brand-logo-mobile" src="https://raw.githubusercontent.com/axtroid/support/main/logo-axtroid-mini.png" alt="Axtroid"><div class="brand-text"><span class="brand-name">SUPPORT TICKETS</span></div></div></header><div class="tickets-wrap"><div id="ticketsList">Loading tickets…</div></div><script>window.__GH_CONFIG__={"settings":{"owner":"anmoshahid","repo":"docs","path":"docs/index.html","branch":"main"}};(function(){
-    var GH = window.__GH_CONFIG__ || {settings:{}, token:null};
+.tickets-wrap{max-width:900px;margin:0 auto;padding:36px 24px 80px;}.tickets-topbar{display:flex;align-items:center;gap:12px;padding:0 24px;height:62px;background:var(--ink);}.ticket-card{border:1px solid var(--paper-line);border-radius:var(--radius);background:var(--paper-raised);margin-bottom:16px;overflow:hidden;}.ticket-card-head{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:12px 16px;background:#F3EFE6;font-size:.8rem;color:var(--text-muted);}.ticket-card-head strong{color:var(--ink);}.ticket-status{margin-left:auto;font-size:.66rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:3px 10px;border-radius:999px;}.ticket-status.open{background:#FBE9E7;color:#B3261E;} .ticket-status.in-progress{background:#FBF1E1;color:var(--accent-dark);} .ticket-status.resolved{background:#E5F2E3;color:#2F7A34;}.ticket-card-body{padding:16px;font-size:.9rem;line-height:1.6;}.ticket-card-body img{max-width:100%;border-radius:6px;margin:6px 0;display:block;}.ticket-meta-row{font-size:.78rem;color:var(--text-muted);margin-top:10px;}.ticket-actions{display:flex;gap:8px;padding:0 16px 16px;}.ticket-actions button{border:1px solid var(--paper-line);background:#fff;border-radius:999px;padding:6px 14px;font-size:.78rem;cursor:pointer;}.ticket-actions button:hover{border-color:var(--accent);color:var(--accent-dark);}.ticket-actions button.is-current{background:var(--ink);color:#fff;border-color:var(--ink);}</style></head><body style="background:var(--paper);"><header class="tickets-topbar"><div class="brand"><img class="brand-logo" src="https://raw.githubusercontent.com/axtroid/support/main/logo-axtroid.png" alt="Axtroid"><img class="brand-logo-mobile" src="https://raw.githubusercontent.com/axtroid/support/main/logo-axtroid-mini.png" alt="Axtroid"><div class="brand-text"><span class="brand-name">SUPPORT TICKETS</span></div></div></header><div class="tickets-wrap"><div id="ticketsList">Loading tickets…</div></div><script>window.__GH_CONFIG__={"settings":{"owner":"anmoshahid","repo":"docs","path":"docs/index.html","branch":"main","ticketsRelayUrl":"http://support-tickets.anmoshahid.workers.dev"}};(function(){
+    /* This page is served from the same public repo as the docs site, so
+       reading tickets.json needs no token — the GitHub Contents API allows
+       anonymous GETs of a public repo. Only *writing* a status change needs
+       credentials, and this page has no safe way to hold a repo-write token
+       (it's just a static file anyone with the URL can open) — so writes go
+       through the same relay the public ticket form uses, gated by an admin
+       key that's requested once and never baked into the page itself. */
+    var GH = window.__GH_CONFIG__ || {settings:{}};
+    var RELAY = GH.settings.ticketsRelayUrl || '';
     function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
     function ghGetUrl(path){ return 'https://api.github.com/repos/'+GH.settings.owner+'/'+GH.settings.repo+'/contents/'+path+'?ref='+GH.settings.branch; }
-    function ghPutUrl(path){ return 'https://api.github.com/repos/'+GH.settings.owner+'/'+GH.settings.repo+'/contents/'+path; }
-    function ghHeaders(json){ var h={Authorization:'Bearer '+GH.token, Accept:'application/vnd.github+json'}; if(json) h['Content-Type']='application/json'; return h; }
     function siblingPath(filename){ return (GH.settings.path||'').replace(/[^/]+$/,'') + filename; }
     function ghGetFile(path){
-      return fetch(ghGetUrl(path),{headers:ghHeaders(false)}).then(function(r){
+      return fetch(ghGetUrl(path),{headers:{Accept:'application/vnd.github+json'}}).then(function(r){
         if (r.status===404) return null;
         if (!r.ok) return r.json().catch(function(){return {};}).then(function(j){ throw new Error('GitHub read of "'+path+'" failed ('+r.status+'): '+(j.message||r.statusText)); });
         return r.json();
       });
     }
-    function ghPutFile(path, contentString, message, sha){
-      var body={message:message, content:btoa(unescape(encodeURIComponent(contentString))), branch:GH.settings.branch};
-      if (sha) body.sha = sha;
-      return fetch(ghPutUrl(path),{method:'PUT',headers:ghHeaders(true),body:JSON.stringify(body)}).then(function(r){
-        return r.json().catch(function(){return {};}).then(function(j){
-          if (!r.ok) throw new Error('GitHub write to "'+path+'" failed ('+r.status+'): '+(j.message||r.statusText));
-          return j;
-        });
+    function getAdminKey(){
+      var k = sessionStorage.getItem('kb_tickets_admin_key');
+      if (!k){ k = prompt('Admin key to update ticket status:') || ''; if (k) sessionStorage.setItem('kb_tickets_admin_key', k); }
+      return k;
+    }
+    function updateTicketStatus(id, status){
+      if (!RELAY) return Promise.reject(new Error('No tickets relay URL configured in ⚙ GitHub Settings.'));
+      var key = getAdminKey();
+      if (!key) return Promise.reject(new Error('Admin key required.'));
+      return fetch(RELAY+'/update-ticket-status', {
+        method:'POST', headers:{'Content-Type':'application/json','X-Admin-Key':key},
+        body: JSON.stringify({ owner:GH.settings.owner, repo:GH.settings.repo, branch:GH.settings.branch, path:GH.settings.path, id:id, status:status })
+      }).then(function(r){
+        if (r.status===401){ sessionStorage.removeItem('kb_tickets_admin_key'); throw new Error('Admin key rejected.'); }
+        if (!r.ok) return r.json().catch(function(){return {};}).then(function(j){ throw new Error(j.error||('relay failed ('+r.status+')')); });
+        return r.json();
       });
     }
     var ticketsPath = siblingPath('tickets.json');
-    var currentSha = null;
     function statusLabel(s){ return s==='in-progress' ? 'In Progress' : s==='resolved' ? 'Resolved' : 'Open'; }
     function render(list){
       var wrap = document.getElementById('ticketsList');
@@ -438,7 +451,6 @@
       ghGetFile(ticketsPath).then(function(existing){
         var list = [];
         if (existing && existing.content){
-          currentSha = existing.sha;
           try{ list = JSON.parse(decodeURIComponent(escape(atob(existing.content.replace(/\n/g,''))))); }catch(e){ list = []; }
         }
         render(list);
@@ -453,12 +465,8 @@
           var card = btn.closest('[data-ticket]');
           var id = card.getAttribute('data-ticket');
           var status = btn.getAttribute('data-set-status');
-          var ticket = list.find(function(t){ return t.id===id; });
-          if (!ticket) return;
-          ticket.status = status;
-          ghPutFile(ticketsPath, JSON.stringify(list, null, 2), 'Update ticket status', currentSha).then(function(res){
-            if (res && res.content) currentSha = res.content.sha;
-            render(list); bindActions(list);
+          updateTicketStatus(id, status).then(function(){
+            load(); // re-fetch from GitHub so the view reflects what actually got committed
           }).catch(function(e){ alert('Could not update status: '+e.message); });
         });
       });
