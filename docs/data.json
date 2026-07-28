@@ -21,63 +21,19 @@
       "title": "Axtroid DocStudio v1.0.0",
       "order": 0,
       "updated": "28 Jul 2026",
-      "blocks": [
-        {
-          "id": "blk_97lobzl",
-          "type": "paragraph",
-          "html": "This is documentation authoring platform for Axtroid Documentation Portal www.axtroid.com/documentation.<div>The DocStudio facilitates seamless integration to the live publishing on the portal with easy user interface.</div>"
-        },
-        {
-          "id": "blk_anklasb",
-          "type": "heading",
-          "level": 3,
-          "html": "Prerequisites"
-        },
-        {
-          "id": "blk_ih8twvu",
-          "type": "paragraph",
-          "html": "Always make sure you have necessary access to work on DocStudio."
-        },
-        {
-          "id": "blk_y66c88n",
-          "type": "callout",
-          "calloutType": "tip",
-          "html": "Before you start using DocStudio, user must download the stand-alone app."
-        },
-        {
-          "id": "blk_ua4gea0",
-          "type": "list",
-          "ordered": true,
-          "items": [
-            "Once the app is downloaded on to the desktop, click to open the app.",
-            "Make sure you see instructions page.",
-            "Follow the instructions to set the real-time authoring-environment.",
-            "Click ⚙️Settings icon on the top left.",
-            "Fill the details as shown below then click Save Settings."
-          ]
-        },
-        {
-          "id": "blk_ksu54fn",
-          "type": "list",
-          "ordered": false,
-          "items": [
-            "Owner: axtroid",
-            "Repo: documentation",
-            "Path: docs/index.html (obtain it from your admin)",
-            "Branch: main",
-            "Personal access token: (obtain it from you admin)"
-          ]
-        },
-        {
-          "id": "blk_iw98jvy",
-          "type": "callout",
-          "calloutType": "important",
-          "html": "Application must be restarted to sync with the live content on the server."
-        }
-      ]
+      "file": "instructions-getting-started-axtroid-docstudio-v1-0-0.json"
     }
   ],
   "changelog": [
+    {
+      "date": "28 Jul 2026",
+      "tag": "updated",
+      "product": "Instructions",
+      "text": "\"Axtroid DocStudio v1.0.0\" updated",
+      "details": [
+        "paragraph added: \"Welcome\""
+      ]
+    },
     {
       "date": "28 Jul 2026",
       "tag": "updated",
